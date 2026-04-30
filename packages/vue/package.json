@@ -1,0 +1,36 @@
+{
+  "name": "@rezafab/fab-button-vue",
+  "version": "0.1.0",
+  "description": "Vue adapter for FabButton.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "sideEffects": ["*.css"],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run --passWithNoTests"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "peerDependencies": {
+    "vue": ">=3.3.0"
+  },
+  "dependencies": {
+    "@rezafab/fab-button-core": "workspace:*",
+    "@rezafab/fab-button-styles": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^6.4.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.5",
+    "vue": "^3.5.23"
+  }
+}

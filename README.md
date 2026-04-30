@@ -8,6 +8,8 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 
 - Framework-agnostic core logic and types
 - React adapter for immediate use in React projects
+- Vue adapter for Vue 3 projects
+- Svelte adapter for Svelte projects
 - Web Component adapter (`<fab-button>`) for vanilla HTML, Vue, Svelte, Angular, or legacy apps
 - Easy customization via:
   - CSS variables such as `--fab-button-bg`, `--fab-button-radius`, and `--fab-button-gap`
@@ -19,6 +21,8 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 - `@rezafab/fab-button-core`: core types and class/CSS-variable helpers
 - `@rezafab/fab-button-styles`: default `style.css`
 - `@rezafab/fab-button-react`: React `FabButton` component
+- `@rezafab/fab-button-vue`: Vue `FabButton` component
+- `@rezafab/fab-button-svelte`: Svelte `FabButton` component
 - `@rezafab/fab-button-element`: Custom Element adapter
 - `@rezafab/docs`: Storybook documentation app
 
@@ -30,6 +34,14 @@ pnpm add @rezafab/fab-button-react
 
 ```bash
 pnpm add @rezafab/fab-button-element
+```
+
+```bash
+pnpm add @rezafab/fab-button-vue
+```
+
+```bash
+pnpm add @rezafab/fab-button-svelte
 ```
 
 ## React Usage
@@ -120,7 +132,6 @@ pnpm storybook
 
 ## Roadmap
 
-- Add Vue and Svelte adapters
 - Expand a11y patterns and keyboard interaction options
 - Add theme tokens package
 - Publish examples for non-bundler environments
