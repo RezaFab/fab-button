@@ -1,0 +1,29 @@
+{
+  "name": "@rezafab/docs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "dev": "pnpm storybook",
+    "build": "storybook build",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@rezafab/fab-button-react": "workspace:*",
+    "@rezafab/fab-button-styles": "workspace:*",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "^8.6.18",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "storybook": "^8.6.18",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.0",
+    "vitest": "^4.1.5"
+  }
+}

@@ -1,0 +1,159 @@
+.fab-button {
+  --fab-button-bg: #f4f4f5;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid #d4d4d8;
+  --fab-button-radius: 0.625rem;
+  --fab-button-height: 2.5rem;
+  --fab-button-font-size: 0.9375rem;
+  --fab-button-font-weight: 600;
+  --fab-button-columns: auto;
+  --fab-button-rows: auto;
+  --fab-button-gap: 0.375rem;
+  --fab-button-section-padding: 0 0.875rem;
+  --fab-button-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  --fab-button-transition: 140ms ease;
+
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--fab-button-gap);
+  min-height: var(--fab-button-height);
+  padding: 0.125rem;
+  border: var(--fab-button-border);
+  border-radius: var(--fab-button-radius);
+  background: var(--fab-button-bg);
+  color: var(--fab-button-color);
+  font-size: var(--fab-button-font-size);
+  font-weight: var(--fab-button-font-weight);
+  box-sizing: border-box;
+}
+
+.fab-button[data-layout="grid"] {
+  display: inline-grid;
+  grid-template-columns: var(--fab-button-columns);
+  grid-template-rows: var(--fab-button-rows);
+}
+
+.fab-button[data-layout="flex"] {
+  display: inline-flex;
+}
+
+.fab-button__section {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--fab-button-height) - 0.25rem);
+  padding: var(--fab-button-section-padding);
+  border: 0;
+  border-radius: calc(var(--fab-button-radius) - 0.25rem);
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-decoration: none;
+  user-select: none;
+  cursor: inherit;
+  box-sizing: border-box;
+  transition: background-color var(--fab-button-transition), color var(--fab-button-transition),
+    opacity var(--fab-button-transition);
+}
+
+.fab-button__section[data-section] {
+  cursor: pointer;
+}
+
+.fab-button[data-size="sm"] {
+  --fab-button-height: 2.125rem;
+  --fab-button-font-size: 0.8125rem;
+  --fab-button-section-padding: 0 0.6875rem;
+}
+
+.fab-button[data-size="md"] {
+  --fab-button-height: 2.5rem;
+  --fab-button-font-size: 0.9375rem;
+  --fab-button-section-padding: 0 0.875rem;
+}
+
+.fab-button[data-size="lg"] {
+  --fab-button-height: 2.875rem;
+  --fab-button-font-size: 1rem;
+  --fab-button-section-padding: 0 1rem;
+}
+
+.fab-button[data-shape="square"] {
+  --fab-button-radius: 0.35rem;
+}
+
+.fab-button[data-shape="rounded"] {
+  --fab-button-radius: 0.625rem;
+}
+
+.fab-button[data-shape="pill"] {
+  --fab-button-radius: 999px;
+}
+
+.fab-button[data-variant="default"] {
+  --fab-button-bg: #f4f4f5;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid #d4d4d8;
+}
+
+.fab-button[data-variant="primary"] {
+  --fab-button-bg: #2563eb;
+  --fab-button-color: #ffffff;
+  --fab-button-border: 1px solid #1d4ed8;
+}
+
+.fab-button[data-variant="dark"] {
+  --fab-button-bg: #18181b;
+  --fab-button-color: #fafafa;
+  --fab-button-border: 1px solid #27272a;
+}
+
+.fab-button[data-variant="outline"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid #71717a;
+}
+
+.fab-button[data-variant="ghost"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid transparent;
+}
+
+.fab-button:not([data-disabled="true"]):not(.is-disabled):hover {
+  filter: brightness(0.97);
+}
+
+.fab-button:not([data-disabled="true"]):not(.is-disabled) .fab-button__section[data-section]:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.fab-button[data-variant="primary"]:not([data-disabled="true"]):not(.is-disabled)
+  .fab-button__section[data-section]:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.fab-button[data-variant="dark"]:not([data-disabled="true"]):not(.is-disabled)
+  .fab-button__section[data-section]:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.fab-button:focus-visible,
+.fab-button__section:focus-visible {
+  outline: none;
+  box-shadow: var(--fab-button-focus-ring);
+}
+
+.fab-button[data-disabled="true"],
+.fab-button.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fab-button[data-disabled="true"] .fab-button__section,
+.fab-button.is-disabled .fab-button__section,
+.fab-button__section:disabled,
+.fab-button__section[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.75;
+}

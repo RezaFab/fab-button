@@ -1,0 +1,19 @@
+.legacy-wrapper .fab-button {
+  --fab-button-bg: #fff8e6;
+  --fab-button-color: #6d4c11;
+  --fab-button-border: 1px solid #f59e0b;
+  --fab-button-radius: 10px;
+}
+
+.legacy-wrapper .fab-button__section {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.2px;
+}
+
+.tailwind-like {
+  border-radius: 9999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 600;
+}
