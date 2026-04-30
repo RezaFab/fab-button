@@ -122,6 +122,28 @@ Use `unstyled` to skip default classes and fully own the rendering styles from y
 />
 ```
 
+## Accessibility and Keyboard
+
+For section-action buttons, you can keep default tab navigation or switch to toolbar-style keyboard navigation.
+
+```tsx
+<FabButton
+  keyboardNavigation="toolbar"
+  keyboardOrientation="horizontal"
+  loopNavigation
+  sections={[
+    { key: "copy", content: "Copy", onClick: () => {} },
+    { key: "share", content: "Share", onClick: () => {} },
+    { key: "save", content: "Save", onClick: () => {} }
+  ]}
+/>
+```
+
+- `keyboardNavigation="tab"`: each section is in normal tab order (default)
+- `keyboardNavigation="toolbar"`: one tab stop + arrow key navigation (`Home`/`End` supported)
+- `keyboardOrientation`: `horizontal`, `vertical`, or `both`
+- `loopNavigation`: wrap focus from last to first and vice versa (default `true`)
+
 ## Development
 
 ```bash
@@ -132,6 +154,5 @@ pnpm storybook
 
 ## Roadmap
 
-- Expand a11y patterns and keyboard interaction options
 - Add theme tokens package
 - Publish examples for non-bundler environments

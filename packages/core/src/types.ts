@@ -6,6 +6,10 @@ export type FabButtonShape = "square" | "rounded" | "pill"
 
 export type FabButtonVariant = "default" | "primary" | "dark" | "outline" | "ghost"
 
+export type FabButtonKeyboardNavigation = "tab" | "toolbar"
+
+export type FabButtonKeyboardOrientation = "horizontal" | "vertical" | "both"
+
 export interface FabButtonSectionBase {
   key: string
   className?: string

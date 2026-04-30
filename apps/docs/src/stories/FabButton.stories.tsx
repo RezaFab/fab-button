@@ -54,6 +54,19 @@ export const PuzzleButtonFourActions: Story = {
   }
 }
 
+export const ToolbarKeyboardNavigation: Story = {
+  args: {
+    keyboardNavigation: "toolbar",
+    keyboardOrientation: "horizontal",
+    loopNavigation: true,
+    sections: [
+      { key: "copy", content: "Copy", onClick: () => undefined, ariaLabel: "Copy item" },
+      { key: "share", content: "Share", onClick: () => undefined, ariaLabel: "Share item" },
+      { key: "save", content: "Save", onClick: () => undefined, ariaLabel: "Save item" }
+    ]
+  }
+}
+
 export const LegacyCSSIntegration: Story = {
   render: (args) => (
     <div className="legacy-wrapper">

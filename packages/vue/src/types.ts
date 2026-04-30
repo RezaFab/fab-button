@@ -1,5 +1,7 @@
 import type { StyleValue, VNodeChild } from "vue"
 import type {
+  FabButtonKeyboardNavigation,
+  FabButtonKeyboardOrientation,
   FabButtonLayout,
   FabButtonSectionBase,
   FabButtonShape,
@@ -31,5 +33,8 @@ export interface FabButtonProps {
   disabled?: boolean
   loading?: boolean
   ariaLabel?: string
+  keyboardNavigation?: FabButtonKeyboardNavigation
+  keyboardOrientation?: FabButtonKeyboardOrientation
+  loopNavigation?: boolean
   onClick?: (event: MouseEvent) => void
 }

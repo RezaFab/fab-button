@@ -1,8 +1,11 @@
-import { defineComponent, h, mergeProps } from "vue"
+import { computed, defineComponent, h, mergeProps, nextTick, ref, watch } from "vue"
 import type { PropType } from "vue"
 import {
+  getEnabledSectionIndices,
   getFabButtonClasses,
   getFabButtonCssVars,
+  getNavigationCommand,
+  resolveSectionIndex,
   getSectionClasses,
   normalizeSections
 } from "@rezafab/fab-button-core"
@@ -73,6 +76,18 @@ export const FabButton = defineComponent({
       type: String,
       default: undefined
     },
+    keyboardNavigation: {
+      type: String as PropType<FabButtonProps["keyboardNavigation"]>,
+      default: "tab"
+    },
+    keyboardOrientation: {
+      type: String as PropType<FabButtonProps["keyboardOrientation"]>,
+      default: undefined
+    },
+    loopNavigation: {
+      type: Boolean,
+      default: true
+    },
     onClick: {
       type: Function as PropType<FabButtonProps["onClick"]>,
       default: undefined
@@ -83,10 +98,72 @@ export const FabButton = defineComponent({
     "section-click": (_key: string, _event: MouseEvent) => true
   },
   setup(props, { attrs, emit }) {
+    const rootRef = ref<HTMLElement | null>(null)
+    const activeIndex = ref(-1)
+    const normalizedSections = computed(() => normalizeSections(props.sections ?? []))
+    const hasSectionActions = computed(() =>
+      normalizedSections.value.some((section) => Boolean(section.onClick))
+    )
+    const isDisabled = computed(() => props.disabled || props.loading)
+    const toolbarMode = computed(
+      () => hasSectionActions.value && props.keyboardNavigation === "toolbar"
+    )
+    const keyboardOrientation = computed(
+      () => props.keyboardOrientation ?? (props.layout === "grid" ? "both" : "horizontal")
+    )
+    const enabledIndices = computed(() =>
+      getEnabledSectionIndices(normalizedSections.value, isDisabled.value)
+    )
+
+    watch(
+      [toolbarMode, enabledIndices],
+      () => {
+        if (!toolbarMode.value) return
+        if (!enabledIndices.value.length) {
+          activeIndex.value = -1
+          return
+        }
+        if (!enabledIndices.value.includes(activeIndex.value)) {
+          activeIndex.value = enabledIndices.value[0]
+        }
+      },
+      { immediate: true }
+    )
+
+    const focusSection = (index: number) => {
+      nextTick(() => {
+        rootRef.value
+          ?.querySelector<HTMLButtonElement>(`button[data-section-index="${index}"]`)
+          ?.focus()
+      })
+    }
+
+    const handleToolbarKeyDown = (event: KeyboardEvent) => {
+      if (!toolbarMode.value || !enabledIndices.value.length) return
+
+      const command = getNavigationCommand(event.key, keyboardOrientation.value)
+      if (!command) return
+
+      const target = event.target as HTMLElement | null
+      const sectionButton = target?.closest<HTMLButtonElement>("button[data-section-index]")
+      if (!sectionButton) return
+
+      const indexValue = Number(sectionButton.dataset.sectionIndex)
+      const currentIndex = Number.isNaN(indexValue) ? activeIndex.value : indexValue
+      const nextIndex = resolveSectionIndex({
+        command,
+        currentIndex,
+        enabledIndices: enabledIndices.value,
+        loop: props.loopNavigation
+      })
+      if (nextIndex === null) return
+
+      event.preventDefault()
+      activeIndex.value = nextIndex
+      focusSection(nextIndex)
+    }
+
     return () => {
-      const normalizedSections = normalizeSections(props.sections ?? [])
-      const hasSectionActions = normalizedSections.some((section) => Boolean(section.onClick))
-      const isDisabled = props.disabled || props.loading
       const styleVars = getFabButtonCssVars({
         columns: props.columns,
         rows: props.rows,
@@ -100,24 +177,33 @@ export const FabButton = defineComponent({
             size: props.size,
             shape: props.shape,
             variant: props.variant,
-            disabled: isDisabled,
+            disabled: isDisabled.value,
             loading: props.loading
           })
       const rootProps = {
         class: rootClassName,
         style: [styleVars, props.style],
         "aria-label": props.ariaLabel,
+        "aria-busy": props.loading ? "true" : undefined,
         "data-layout": props.layout,
         "data-variant": props.variant,
         "data-size": props.size,
         "data-shape": props.shape,
-        "data-disabled": isDisabled ? "true" : undefined
+        "data-disabled": isDisabled.value ? "true" : undefined
       }
 
-      if (hasSectionActions) {
+      if (hasSectionActions.value) {
         const children = props.loading
-          ? h("span", { class: props.unstyled ? undefined : "fab-button__section", "aria-live": "polite" }, "Loading...")
-          : normalizedSections.map((section) =>
+          ? h(
+              "span",
+              {
+                class: props.unstyled ? undefined : "fab-button__section",
+                "aria-live": "polite",
+                role: "status"
+              },
+              "Loading..."
+            )
+          : normalizedSections.value.map((section, index) =>
               h(
                 "button",
                 {
@@ -125,9 +211,19 @@ export const FabButton = defineComponent({
                   type: "button",
                   class: props.unstyled ? section.className : getSectionClasses(section),
                   style: section.style,
-                  disabled: isDisabled || section.disabled,
+                  disabled: isDisabled.value || section.disabled,
+                  tabIndex:
+                    toolbarMode.value
+                      ? index === activeIndex.value
+                        ? 0
+                        : -1
+                      : undefined,
                   "aria-label": section.ariaLabel,
                   "data-section": section.key,
+                  "data-section-index": index,
+                  onFocus: () => {
+                    if (toolbarMode.value) activeIndex.value = index
+                  },
                   onClick: (event: MouseEvent) => {
                     section.onClick?.(event)
                     emit("section-click", section.key, event)
@@ -141,16 +237,30 @@ export const FabButton = defineComponent({
           "div",
           mergeProps(attrs, {
             ...rootProps,
-            role: "group",
-            "aria-disabled": isDisabled ? "true" : undefined
+            ref: rootRef,
+            role: toolbarMode.value ? "toolbar" : "group",
+            "aria-orientation":
+              toolbarMode.value && keyboardOrientation.value !== "both"
+                ? keyboardOrientation.value
+                : undefined,
+            "aria-disabled": isDisabled.value ? "true" : undefined,
+            onKeydown: handleToolbarKeyDown
           }),
           children
         )
       }
 
       const children = props.loading
-        ? h("span", { class: props.unstyled ? undefined : "fab-button__section", "aria-live": "polite" }, "Loading...")
-        : normalizedSections.map((section) =>
+        ? h(
+            "span",
+            {
+              class: props.unstyled ? undefined : "fab-button__section",
+              "aria-live": "polite",
+              role: "status"
+            },
+            "Loading..."
+          )
+        : normalizedSections.value.map((section) =>
             h(
               "span",
               {
@@ -169,7 +279,7 @@ export const FabButton = defineComponent({
         mergeProps(attrs, {
           ...rootProps,
           type: "button",
-          disabled: isDisabled,
+          disabled: isDisabled.value,
           onClick: (event: MouseEvent) => {
             props.onClick?.(event)
             emit("click", event)
