@@ -1,11 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react"
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type KeyboardEvent
+} from "react"
+import {
+  getFabButtonConfig,
+  getFabButtonTheme,
   getEnabledSectionIndices,
   getFabButtonClasses,
   getFabButtonCssVars,
   getNavigationCommand,
   resolveSectionIndex,
   getSectionClasses,
+  subscribeFabButtonConfig,
   normalizeSections
 } from "@rezafab/fab-button-core"
 import type { FabButtonProps } from "./types"
@@ -31,12 +42,15 @@ export const FabButton = ({
   unstyled = false,
   disabled = false,
   loading = false,
+  theme,
   ariaLabel,
   keyboardNavigation = "tab",
   keyboardOrientation = layout === "grid" ? "both" : "horizontal",
   loopNavigation = true,
   onClick
 }: FabButtonProps) => {
+  useSyncExternalStore(subscribeFabButtonConfig, getFabButtonConfig, getFabButtonConfig)
+
   const normalizedSections = normalizeSections(sections ?? [])
   const hasSectionActions = normalizedSections.some((section) => Boolean(section.onClick))
   const isDisabled = disabled || loading
@@ -64,6 +78,7 @@ export const FabButton = ({
     rows,
     gap
   }) as CSSProperties
+  const resolvedTheme = theme ?? getFabButtonTheme()
   const rootClassName = unstyled
     ? className
     : getFabButtonClasses({
@@ -72,6 +87,7 @@ export const FabButton = ({
         size,
         shape,
         variant,
+        theme: resolvedTheme,
         disabled: isDisabled,
         loading
       })
@@ -115,12 +131,13 @@ export const FabButton = ({
         data-variant={variant}
         data-size={size}
         data-shape={shape}
+        data-theme={resolvedTheme}
         data-disabled={isDisabled || undefined}
         onKeyDown={handleToolbarKeyDown}
       >
         {loading ? (
           <span
-            className={unstyled ? undefined : "fab-button__section"}
+            className={unstyled ? undefined : getSectionClasses({ theme: resolvedTheme })}
             aria-live="polite"
             role="status"
           >
@@ -134,7 +151,11 @@ export const FabButton = ({
                 sectionRefs.current[index] = node
               }}
               type="button"
-              className={unstyled ? section.className : getSectionClasses(section)}
+              className={
+                unstyled
+                  ? section.className
+                  : getSectionClasses({ ...section, interactive: true, theme: resolvedTheme })
+              }
               style={section.style}
               disabled={isDisabled || section.disabled}
               tabIndex={toolbarMode ? (index === activeIndex ? 0 : -1) : undefined}
@@ -166,12 +187,13 @@ export const FabButton = ({
       data-variant={variant}
       data-size={size}
       data-shape={shape}
+      data-theme={resolvedTheme}
       data-disabled={isDisabled || undefined}
       onClick={onClick}
     >
       {loading ? (
         <span
-          className={unstyled ? undefined : "fab-button__section"}
+          className={unstyled ? undefined : getSectionClasses({ theme: resolvedTheme })}
           aria-live="polite"
           role="status"
         >
@@ -181,7 +203,7 @@ export const FabButton = ({
         normalizedSections.map((section) => (
           <span
             key={section.key}
-            className={unstyled ? section.className : getSectionClasses(section)}
+            className={unstyled ? section.className : getSectionClasses({ ...section, theme: resolvedTheme })}
             style={section.style}
             data-section={section.key}
             aria-label={section.ariaLabel}

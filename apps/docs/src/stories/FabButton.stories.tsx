@@ -1,9 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react"
+import { useEffect, useRef, useState } from "react"
 import { FabButton } from "@rezafab/fab-button-react"
 
 const meta = {
   title: "FabButton/Examples",
-  component: FabButton
+  component: FabButton,
+  args: {
+    theme: "light"
+  },
+  argTypes: {
+    theme: {
+      control: "radio",
+      options: ["light", "dark", "system"]
+    }
+  }
 } satisfies Meta<typeof FabButton>
 
 export default meta
@@ -32,7 +42,7 @@ export const IconLabelCountButton: Story = {
   args: {
     shape: "pill",
     sections: [
-      { key: "icon", content: "🔔", ariaLabel: "Notification icon" },
+      { key: "icon", content: "Bell", ariaLabel: "Notification icon" },
       { key: "label", content: "Alerts" },
       { key: "count", content: "12" }
     ]
@@ -65,6 +75,60 @@ export const ToolbarKeyboardNavigation: Story = {
       { key: "save", content: "Save", onClick: () => undefined, ariaLabel: "Save item" }
     ]
   }
+}
+
+const KeyboardShortcutActionsDemo = () => {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const [lastAction, setLastAction] = useState("None")
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+      const shortcutMap: Record<string, string> = {
+        c: "copy",
+        s: "share",
+        v: "save"
+      }
+      const sectionKey = shortcutMap[key]
+      if (!sectionKey) return
+
+      const sectionButton = rootRef.current?.querySelector<HTMLButtonElement>(
+        `button[data-section="${sectionKey}"]`
+      )
+      if (!sectionButton || sectionButton.disabled) return
+
+      event.preventDefault()
+      sectionButton.focus()
+      sectionButton.click()
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+    }
+  }, [])
+
+  return (
+    <div ref={rootRef} style={{ display: "grid", gap: "12px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        Press keyboard shortcuts: <strong>C</strong> = Copy, <strong>S</strong> = Share,{" "}
+        <strong>V</strong> = Save
+      </p>
+      <FabButton
+        keyboardNavigation="toolbar"
+        sections={[
+          { key: "copy", content: "Copy", onClick: () => setLastAction("Copy") },
+          { key: "share", content: "Share", onClick: () => setLastAction("Share") },
+          { key: "save", content: "Save", onClick: () => setLastAction("Save") }
+        ]}
+      />
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last action: {lastAction}</p>
+    </div>
+  )
+}
+
+export const KeyboardShortcutIntegration: Story = {
+  render: () => <KeyboardShortcutActionsDemo />
 }
 
 export const LegacyCSSIntegration: Story = {
@@ -141,5 +205,16 @@ export const Loading: Story = {
   args: {
     loading: true,
     sections: [{ key: "label", content: "Submit" }]
+  }
+}
+
+export const DarkTheme: Story = {
+  args: {
+    theme: "dark",
+    variant: "default",
+    sections: [
+      { key: "label", content: "Dark Theme" },
+      { key: "state", content: "Native Support" }
+    ]
   }
 }

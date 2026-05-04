@@ -6,6 +6,7 @@ import type {
   FabButtonSectionBase,
   FabButtonShape,
   FabButtonSize,
+  FabButtonTheme,
   FabButtonVariant
 } from "@rezafab/fab-button-core"
 
@@ -30,6 +31,7 @@ export interface FabButtonProps {
   unstyled?: boolean
   disabled?: boolean
   loading?: boolean
+  theme?: FabButtonTheme
   ariaLabel?: string
   keyboardNavigation?: FabButtonKeyboardNavigation
   keyboardOrientation?: FabButtonKeyboardOrientation

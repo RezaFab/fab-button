@@ -1,20 +1,38 @@
 # Changelog
 
-Semua perubahan penting pada `@rezafab/fab-button` dicatat di file ini.
+All notable changes to `@rezafab/fab-button` are documented in this file.
+
+## [1.1.0] - 2026-05-04
+
+- Added CSS mode configuration system (`manual` and `library`) with global runtime config.
+- Added library styling presets support with Tailwind default behavior in Storybook docs.
+- Added native theme support (`light`, `dark`, `system`) across React, Vue, Svelte, and Element adapters.
+- Added theme-aware base styling in `@rezafab/fab-button-styles`.
+- Updated Storybook with:
+  - default Tailwind library mode setup
+  - global theme toolbar
+  - dark theme examples
+  - keyboard shortcut integration example (`C`, `S`, `V`)
+- Expanded README with:
+  - English-only documentation
+  - richer comparison cases (traditional vs FabButton)
+  - layout examples (horizontal, vertical, grid)
+  - role-based hide/disable workflow example
+  - keyboard shortcut integration documentation
 
 ## [1.0.0] - 2026-05-04
 
-- Set baseline major ke `1` sesuai aturan versioning baru.
-- Rapikan konfigurasi publish npm agar isi paket hanya file production:
+- Set the major baseline to `1` based on the updated versioning strategy.
+- Refined npm publish configuration so the package only contains production files:
   - include: `README.md`, `LICENSE`, `package.json`, build output, `.d.ts`, compiled CSS
-  - exclude: docs app, changeset folder, source/story/config yang tidak perlu untuk consumer
-- Tambah export map root untuk akses subpath:
+  - exclude: docs app, changeset folder, and source/story/config files not needed by consumers
+- Added root export map for subpath access:
   - `./core`, `./react`, `./vue`, `./svelte`, `./element`
   - CSS subpath exports
-- Tambah panduan versioning dan script bump versi:
-  - major untuk perubahan besar button
-  - minor untuk merge PR (fitur/improvement)
-  - patch untuk fix
+- Added versioning guide and version bump scripts:
+  - major for large FabButton changes
+  - minor for merged feature/improvement PRs
+  - patch for fixes
 
 ## [0.0.1]
 

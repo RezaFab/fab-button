@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from "svelte"
+  import { createEventDispatcher, onDestroy, tick } from "svelte"
   import {
     getEnabledSectionIndices,
+    getFabButtonTheme,
     getFabButtonClasses,
     getFabButtonCssVars,
     getNavigationCommand,
     resolveSectionIndex,
     getSectionClasses,
+    subscribeFabButtonConfig,
     normalizeSections
   } from "@rezafab/fab-button-core"
   import type { FabButtonProps, FabButtonSection } from "./types"
@@ -26,6 +28,7 @@
   export let unstyled = false
   export let disabled = false
   export let loading = false
+  export let theme: FabButtonProps["theme"] = undefined
   export let ariaLabel: FabButtonProps["ariaLabel"] = undefined
   export let keyboardNavigation: NonNullable<FabButtonProps["keyboardNavigation"]> = "tab"
   export let keyboardOrientation: FabButtonProps["keyboardOrientation"] = undefined
@@ -44,7 +47,15 @@
       .join("; ")
 
   let activeIndex = -1
+  let styleConfigVersion = 0
   let sectionRefs: Array<HTMLButtonElement | null> = []
+  const unsubscribeConfig = subscribeFabButtonConfig(() => {
+    styleConfigVersion += 1
+  })
+
+  onDestroy(() => {
+    unsubscribeConfig()
+  })
 
   $: normalizedSections = normalizeSections(sections ?? [])
   $: hasSectionActions = normalizedSections.some((section) => Boolean(section.onClick))
@@ -60,17 +71,20 @@
     }
   }
   $: styleVars = getFabButtonCssVars({ columns, rows, gap })
+  $: resolvedTheme = theme ?? getFabButtonTheme()
   $: rootClassName = unstyled
-    ? className
-    : getFabButtonClasses({
+    ? (styleConfigVersion, className)
+    : (styleConfigVersion,
+      getFabButtonClasses({
         className,
         layout,
         size,
         shape,
         variant,
+        theme: resolvedTheme,
         disabled: isDisabled,
         loading
-      })
+      }))
   $: rootStyle = [toStyleString(styleVars), style].filter(Boolean).join("; ")
 
   const handleRootClick = (event: MouseEvent) => {
@@ -138,11 +152,12 @@
     data-variant={variant}
     data-size={size}
     data-shape={shape}
+    data-theme={resolvedTheme}
     data-disabled={isDisabled || undefined}
     on:keydown={handleToolbarKeydown}
   >
     {#if loading}
-      <span class={unstyled ? undefined : "fab-button__section"} aria-live="polite" role="status">
+      <span class={unstyled ? undefined : getSectionClasses({ theme: resolvedTheme })} aria-live="polite" role="status">
         Loading...
       </span>
     {:else}
@@ -150,7 +165,7 @@
         <button
           use:registerSection={index}
           type="button"
-          class={unstyled ? section.className : getSectionClasses(section)}
+          class={unstyled ? section.className : getSectionClasses({ ...section, interactive: true, theme: resolvedTheme })}
           style={section.style}
           disabled={isDisabled || section.disabled}
           tabindex={toolbarMode ? (index === activeIndex ? 0 : -1) : undefined}
@@ -179,17 +194,18 @@
     data-variant={variant}
     data-size={size}
     data-shape={shape}
+    data-theme={resolvedTheme}
     data-disabled={isDisabled || undefined}
     on:click={handleRootClick}
   >
     {#if loading}
-      <span class={unstyled ? undefined : "fab-button__section"} aria-live="polite" role="status">
+      <span class={unstyled ? undefined : getSectionClasses({ theme: resolvedTheme })} aria-live="polite" role="status">
         Loading...
       </span>
     {:else}
       {#each normalizedSections as section (section.key)}
         <span
-          class={unstyled ? section.className : getSectionClasses(section)}
+          class={unstyled ? section.className : getSectionClasses({ ...section, theme: resolvedTheme })}
           style={section.style}
           data-section={section.key}
           aria-label={section.ariaLabel}

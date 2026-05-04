@@ -120,6 +120,62 @@
   --fab-button-border: 1px solid transparent;
 }
 
+.fab-button[data-theme="dark"][data-variant="default"] {
+  --fab-button-bg: #18181b;
+  --fab-button-color: #f4f4f5;
+  --fab-button-border: 1px solid #3f3f46;
+}
+
+.fab-button[data-theme="dark"][data-variant="outline"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #f4f4f5;
+  --fab-button-border: 1px solid #52525b;
+}
+
+.fab-button[data-theme="dark"][data-variant="ghost"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #f4f4f5;
+  --fab-button-border: 1px solid transparent;
+}
+
+.fab-button[data-theme="light"][data-variant="default"] {
+  --fab-button-bg: #f4f4f5;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid #d4d4d8;
+}
+
+.fab-button[data-theme="light"][data-variant="outline"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid #71717a;
+}
+
+.fab-button[data-theme="light"][data-variant="ghost"] {
+  --fab-button-bg: transparent;
+  --fab-button-color: #18181b;
+  --fab-button-border: 1px solid transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fab-button[data-theme="system"][data-variant="default"] {
+    --fab-button-bg: #18181b;
+    --fab-button-color: #f4f4f5;
+    --fab-button-border: 1px solid #3f3f46;
+  }
+
+  .fab-button[data-theme="system"][data-variant="outline"] {
+    --fab-button-bg: transparent;
+    --fab-button-color: #f4f4f5;
+    --fab-button-border: 1px solid #52525b;
+  }
+
+  .fab-button[data-theme="system"][data-variant="ghost"] {
+    --fab-button-bg: transparent;
+    --fab-button-color: #f4f4f5;
+    --fab-button-border: 1px solid transparent;
+  }
+}
+
 .fab-button:not([data-disabled="true"]):not(.is-disabled):hover {
   filter: brightness(0.97);
 }
@@ -136,6 +192,18 @@
 .fab-button[data-variant="dark"]:not([data-disabled="true"]):not(.is-disabled)
   .fab-button__section[data-section]:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+.fab-button[data-theme="dark"]:not([data-disabled="true"]):not(.is-disabled)
+  .fab-button__section[data-section]:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .fab-button[data-theme="system"]:not([data-disabled="true"]):not(.is-disabled)
+    .fab-button__section[data-section]:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
 }
 
 .fab-button:focus-visible,

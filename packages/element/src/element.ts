@@ -1,4 +1,11 @@
-import { getNavigationCommand, resolveSectionIndex } from "@rezafab/fab-button-core"
+import {
+  getFabButtonClasses,
+  getFabButtonTheme,
+  getSectionClasses,
+  getNavigationCommand,
+  resolveSectionIndex,
+  subscribeFabButtonConfig
+} from "@rezafab/fab-button-core"
 
 type FabButtonElementAttributes =
   | "variant"
@@ -8,6 +15,7 @@ type FabButtonElementAttributes =
   | "columns"
   | "rows"
   | "gap"
+  | "theme"
   | "disabled"
   | "loading"
   | "keyboard-navigation"
@@ -22,6 +30,7 @@ const OBSERVED_ATTRIBUTES: FabButtonElementAttributes[] = [
   "columns",
   "rows",
   "gap",
+  "theme",
   "disabled",
   "loading",
   "keyboard-navigation",
@@ -31,6 +40,8 @@ const OBSERVED_ATTRIBUTES: FabButtonElementAttributes[] = [
 
 export class FabButtonElement extends HTMLElement {
   private activeSectionIndex = -1
+  private managedHostClasses = new Set<string>()
+  private unsubscribeConfig: (() => void) | undefined
 
   static get observedAttributes() {
     return OBSERVED_ATTRIBUTES
@@ -97,6 +108,9 @@ export class FabButtonElement extends HTMLElement {
   }
 
   connectedCallback() {
+    this.unsubscribeConfig = subscribeFabButtonConfig(() => {
+      this.refresh()
+    })
     this.addEventListener("click", this.onHostClick)
     this.addEventListener("keydown", this.onHostKeyDown)
     this.addEventListener("focusin", this.onHostFocusIn)
@@ -104,6 +118,8 @@ export class FabButtonElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.unsubscribeConfig?.()
+    this.unsubscribeConfig = undefined
     this.removeEventListener("click", this.onHostClick)
     this.removeEventListener("keydown", this.onHostKeyDown)
     this.removeEventListener("focusin", this.onHostFocusIn)
@@ -175,12 +191,32 @@ export class FabButtonElement extends HTMLElement {
   }
 
   private refresh() {
-    this.classList.add("fab-button")
-    this.dataset.layout = this.getAttribute("layout") || "flex"
-    this.dataset.variant = this.getAttribute("variant") || "default"
-    this.dataset.size = this.getAttribute("size") || "md"
-    this.dataset.shape = this.getAttribute("shape") || "rounded"
-    this.dataset.disabled = this.isDisabled() ? "true" : "false"
+    const layout = (this.getAttribute("layout") as "flex" | "grid") || "flex"
+    const variant = this.getAttribute("variant") || "default"
+    const size = this.getAttribute("size") || "md"
+    const shape = this.getAttribute("shape") || "rounded"
+    const theme = this.getAttribute("theme") || getFabButtonTheme()
+    const loading = this.hasAttribute("loading")
+    const disabled = this.isDisabled()
+
+    this.applyManagedHostClasses(
+      getFabButtonClasses({
+        layout,
+        variant: variant as "default" | "primary" | "dark" | "outline" | "ghost",
+        size: size as "sm" | "md" | "lg",
+        shape: shape as "square" | "rounded" | "pill",
+        theme: theme as "light" | "dark" | "system",
+        disabled,
+        loading
+      })
+    )
+
+    this.dataset.layout = layout
+    this.dataset.variant = variant
+    this.dataset.size = size
+    this.dataset.shape = shape
+    this.dataset.theme = theme
+    this.dataset.disabled = disabled ? "true" : "false"
 
     this.setAttribute("role", this.isToolbarMode() ? "toolbar" : "group")
     const keyboardOrientation = this.getKeyboardOrientation()
@@ -189,8 +225,8 @@ export class FabButtonElement extends HTMLElement {
     } else {
       this.removeAttribute("aria-orientation")
     }
-    this.setAttribute("aria-disabled", this.isDisabled() ? "true" : "false")
-    this.setAttribute("aria-busy", this.hasAttribute("loading") ? "true" : "false")
+    this.setAttribute("aria-disabled", disabled ? "true" : "false")
+    this.setAttribute("aria-busy", loading ? "true" : "false")
 
     const columns = this.getAttribute("columns")
     const rows = this.getAttribute("rows")
@@ -201,9 +237,16 @@ export class FabButtonElement extends HTMLElement {
     if (gap) this.style.setProperty("--fab-button-gap", gap)
 
     this.querySelectorAll<HTMLElement>("[data-section]").forEach((section, index) => {
-      section.classList.add("fab-button__section")
+      this.applyManagedSectionClasses(
+        section,
+        getSectionClasses({
+          disabled,
+          theme: theme as "light" | "dark" | "system",
+          interactive: true
+        })
+      )
       section.dataset.sectionIndex = String(index)
-      if (this.isDisabled()) {
+      if (disabled) {
         section.setAttribute("aria-disabled", "true")
       } else {
         section.removeAttribute("aria-disabled")
@@ -217,6 +260,39 @@ export class FabButtonElement extends HTMLElement {
         section.removeAttribute("tabindex")
       })
     }
+  }
+
+  private applyManagedHostClasses(nextClasses: string) {
+    this.managedHostClasses.forEach((className) => {
+      this.classList.remove(className)
+    })
+    this.managedHostClasses.clear()
+    nextClasses
+      .split(/\s+/)
+      .filter(Boolean)
+      .forEach((className) => {
+        this.classList.add(className)
+        this.managedHostClasses.add(className)
+      })
+  }
+
+  private applyManagedSectionClasses(section: HTMLElement, nextClasses: string) {
+    const previousClasses = section.dataset.fabManagedClassNames
+    if (previousClasses) {
+      previousClasses
+        .split(/\s+/)
+        .filter(Boolean)
+        .forEach((className) => {
+          section.classList.remove(className)
+        })
+    }
+    nextClasses
+      .split(/\s+/)
+      .filter(Boolean)
+      .forEach((className) => {
+        section.classList.add(className)
+      })
+    section.dataset.fabManagedClassNames = nextClasses
   }
 }
 

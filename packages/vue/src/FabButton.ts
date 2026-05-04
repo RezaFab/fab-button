@@ -1,12 +1,14 @@
-import { computed, defineComponent, h, mergeProps, nextTick, ref, watch } from "vue"
+import { computed, defineComponent, h, mergeProps, nextTick, onUnmounted, ref, watch } from "vue"
 import type { PropType } from "vue"
 import {
   getEnabledSectionIndices,
+  getFabButtonTheme,
   getFabButtonClasses,
   getFabButtonCssVars,
   getNavigationCommand,
   resolveSectionIndex,
   getSectionClasses,
+  subscribeFabButtonConfig,
   normalizeSections
 } from "@rezafab/fab-button-core"
 import type { FabButtonProps, FabButtonSection, FabButtonSectionContent } from "./types"
@@ -72,6 +74,10 @@ export const FabButton = defineComponent({
       type: Boolean,
       default: false
     },
+    theme: {
+      type: String as PropType<FabButtonProps["theme"]>,
+      default: undefined
+    },
     ariaLabel: {
       type: String,
       default: undefined
@@ -98,6 +104,14 @@ export const FabButton = defineComponent({
     "section-click": (_key: string, _event: MouseEvent) => true
   },
   setup(props, { attrs, emit }) {
+    const configVersion = ref(0)
+    const unsubscribeConfig = subscribeFabButtonConfig(() => {
+      configVersion.value += 1
+    })
+    onUnmounted(() => {
+      unsubscribeConfig()
+    })
+
     const rootRef = ref<HTMLElement | null>(null)
     const activeIndex = ref(-1)
     const normalizedSections = computed(() => normalizeSections(props.sections ?? []))
@@ -164,11 +178,14 @@ export const FabButton = defineComponent({
     }
 
     return () => {
+      configVersion.value
+
       const styleVars = getFabButtonCssVars({
         columns: props.columns,
         rows: props.rows,
         gap: props.gap
       })
+      const resolvedTheme = props.theme ?? getFabButtonTheme()
       const rootClassName = props.unstyled
         ? props.className
         : getFabButtonClasses({
@@ -177,6 +194,7 @@ export const FabButton = defineComponent({
             size: props.size,
             shape: props.shape,
             variant: props.variant,
+            theme: resolvedTheme,
             disabled: isDisabled.value,
             loading: props.loading
           })
@@ -189,6 +207,7 @@ export const FabButton = defineComponent({
         "data-variant": props.variant,
         "data-size": props.size,
         "data-shape": props.shape,
+        "data-theme": resolvedTheme,
         "data-disabled": isDisabled.value ? "true" : undefined
       }
 
@@ -197,7 +216,7 @@ export const FabButton = defineComponent({
           ? h(
               "span",
               {
-                class: props.unstyled ? undefined : "fab-button__section",
+                class: props.unstyled ? undefined : getSectionClasses({ theme: resolvedTheme }),
                 "aria-live": "polite",
                 role: "status"
               },
@@ -209,7 +228,10 @@ export const FabButton = defineComponent({
                 {
                   key: section.key,
                   type: "button",
-                  class: props.unstyled ? section.className : getSectionClasses(section),
+                  class:
+                    props.unstyled
+                      ? section.className
+                      : getSectionClasses({ ...section, interactive: true, theme: resolvedTheme }),
                   style: section.style,
                   disabled: isDisabled.value || section.disabled,
                   tabIndex:
@@ -254,7 +276,7 @@ export const FabButton = defineComponent({
         ? h(
             "span",
             {
-              class: props.unstyled ? undefined : "fab-button__section",
+              class: props.unstyled ? undefined : getSectionClasses({ theme: resolvedTheme }),
               "aria-live": "polite",
               role: "status"
             },
@@ -265,7 +287,10 @@ export const FabButton = defineComponent({
               "span",
               {
                 key: section.key,
-                class: props.unstyled ? section.className : getSectionClasses(section),
+                class:
+                  props.unstyled
+                    ? section.className
+                    : getSectionClasses({ ...section, theme: resolvedTheme }),
                 style: section.style,
                 "data-section": section.key,
                 "aria-label": section.ariaLabel

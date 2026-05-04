@@ -1,3 +1,11 @@
+:root {
+  color-scheme: light;
+}
+
+:root[data-fab-theme="dark"] {
+  color-scheme: dark;
+}
+
 .legacy-wrapper .fab-button {
   --fab-button-bg: #fff8e6;
   --fab-button-color: #6d4c11;
@@ -16,4 +24,10 @@
   background: #f9fafb;
   color: #111827;
   font-weight: 600;
+}
+
+:root[data-fab-theme="dark"] .legacy-wrapper .fab-button {
+  --fab-button-bg: #2a2115;
+  --fab-button-color: #fef3c7;
+  --fab-button-border: 1px solid #92400e;
 }
