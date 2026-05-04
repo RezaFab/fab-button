@@ -1,0 +1,15 @@
+apps/
+.changeset/
+node_modules/
+packages/*/src/
+packages/*/node_modules/
+**/*.stories.*
+**/*.story.*
+**/vite.config.*
+tsconfig*.json
+**/tsconfig*.json
+eslint.config.*
+.prettierrc*
+pnpm-workspace.yaml
+pnpm-lock.yaml
+CONTRIBUTING.md
