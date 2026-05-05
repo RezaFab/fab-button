@@ -811,5 +811,4 @@ pnpm storybook
 
 ## Roadmap
 
-- [x] Add theme tokens package
 - Publish examples for non-bundler environments
