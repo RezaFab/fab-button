@@ -9,6 +9,10 @@ export type FabButtonVariant = "default" | "primary" | "dark" | "outline" | "gho
 export type FabButtonKeyboardNavigation = "tab" | "toolbar"
 
 export type FabButtonKeyboardOrientation = "horizontal" | "vertical" | "both"
+export type FabButtonShortcutKey = string | number
+export type FabButtonSectionShortcut = FabButtonShortcutKey | FabButtonShortcutKey[]
+export type FabButtonShortcutId = number
+export type FabButtonSectionShortcutId = FabButtonShortcutId | FabButtonShortcutId[]
 
 export type FabButtonCssMode = "manual" | "library"
 
@@ -17,6 +21,8 @@ export type FabButtonTheme = "light" | "dark" | "system"
 
 export interface FabButtonSectionBase {
   key: string
+  shortcut?: FabButtonSectionShortcut
+  shortcutId?: FabButtonSectionShortcutId
   className?: string
   disabled?: boolean
   ariaLabel?: string

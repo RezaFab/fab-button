@@ -2,6 +2,17 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.3.0] - 2026-05-05
+
+- Added built-in section keyboard shortcuts via `shortcut` and `shortcutId` across React, Vue, Svelte, and Element adapters.
+- Added complete keyboard ID map exports: `FAB_BUTTON_SHORTCUT_ID_TO_CODE` and `FAB_BUTTON_SHORTCUT_CODE_TO_ID` (including React re-export).
+- Added shortcut token matching for `key`, `code`, `keycode`, and ID token formats (`id:<number>` / `shortcutid:<number>`).
+- Added adapter metadata attributes for shortcuts: `data-shortcut` and `data-shortcut-id`.
+- Updated keyboard behavior demos to use built-in shortcut mapping (no manual `window` listener code needed).
+- Added Storybook reference story `FullKeyboardShortcutIdMap` for keyboard ID mapping visibility.
+- Updated README keyboard shortcut docs with simplified shortcut rules and full mapping tables.
+- Reformatted README keyboard map tables into 3-column layout for cleaner Markdown rendering.
+
 ## [1.2.0] - 2026-05-05
 
 - Added `@rezafab/fab-button-theme-tokens` package with shared `tokens.css` variables and JS/TS token exports.

@@ -31,3 +31,240 @@
   --fab-button-color: #fef3c7;
   --fab-button-border: 1px solid #92400e;
 }
+
+.kbd-map {
+  box-sizing: border-box;
+  width: min(1240px, 100%);
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f4f7fb 0%, #e7edf5 100%);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.kbd-map__header h2 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: 0.2px;
+}
+
+.kbd-map__header p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.kbd-map__matrix {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 430px;
+  gap: 16px;
+  align-items: start;
+}
+
+.kbd-map__side-panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kbd-map__panel {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid #d1d9e5;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.kbd-map__panel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.kbd-map__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.kbd-map__table th,
+.kbd-map__table td {
+  border: 1px solid #c9d4e2;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.kbd-map__table th {
+  background: #e9eff7;
+  color: #0f172a;
+}
+
+.kbd-map__table td {
+  background: rgba(255, 255, 255, 0.76);
+  color: #1e293b;
+}
+
+.kbd-map__table-empty {
+  background: transparent !important;
+}
+
+.kbd-map__rows {
+  display: grid;
+  gap: 8px;
+}
+
+.kbd-map__row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.kbd-map__key {
+  box-sizing: border-box;
+  min-height: 54px;
+  border-radius: 10px;
+  border: 1px solid #b8c8dc;
+  background: linear-gradient(180deg, #ffffff 0%, #f2f6fc 100%);
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+  padding: 6px 8px 6px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+}
+
+.kbd-map__key--compact {
+  min-height: 52px;
+  width: 100%;
+}
+
+.kbd-map__id {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 16px;
+  border-radius: 999px;
+  background: #0b4a7d;
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.kbd-map__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 8px;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.kbd-map__code {
+  font-size: 10px;
+  color: #334155;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.kbd-map__extra-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kbd-map__extra-column {
+  display: grid;
+  gap: 8px;
+}
+
+:root[data-fab-theme="dark"] .kbd-map {
+  border-color: #334155;
+  background: linear-gradient(160deg, #131f31 0%, #19283e 100%);
+  color: #e2e8f0;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__header p {
+  color: #cbd5e1;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__panel {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: #334155;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__panel h3 {
+  color: #e2e8f0;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__table th,
+:root[data-fab-theme="dark"] .kbd-map__table td {
+  border-color: #4a5f79;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__table th {
+  background: #243347;
+  color: #f8fafc;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__table td {
+  background: rgba(21, 34, 53, 0.82);
+  color: #e2e8f0;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__key {
+  border-color: #4a5f79;
+  background: linear-gradient(180deg, #223249 0%, #18263a 100%);
+  box-shadow: none;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__label {
+  color: #f8fafc;
+}
+
+:root[data-fab-theme="dark"] .kbd-map__code {
+  color: #cbd5e1;
+}
+
+@media (max-width: 1180px) {
+  .kbd-map__matrix {
+    grid-template-columns: 1fr;
+  }
+
+  .kbd-map__side-panels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .kbd-map {
+    padding: 14px;
+  }
+
+  .kbd-map__header h2 {
+    font-size: 24px;
+  }
+
+  .kbd-map__side-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .kbd-map__row {
+    flex-wrap: wrap;
+  }
+
+  .kbd-map__extra-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

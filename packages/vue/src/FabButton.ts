@@ -5,6 +5,7 @@ import {
   getFabButtonTheme,
   getFabButtonClasses,
   getFabButtonCssVars,
+  getShortcutSectionIndex,
   getNavigationCommand,
   resolveSectionIndex,
   getSectionClasses,
@@ -17,6 +18,16 @@ import "@rezafab/fab-button-styles/style.css"
 
 const resolveSectionContent = (content: FabButtonSectionContent) =>
   (typeof content === "function" ? content() : content) ?? undefined
+
+const toShortcutDataAttribute = (shortcut: FabButtonSection["shortcut"]) => {
+  if (shortcut === undefined) return undefined
+  return Array.isArray(shortcut) ? shortcut.join(",") : `${shortcut}`
+}
+
+const toShortcutIdDataAttribute = (shortcutId: FabButtonSection["shortcutId"]) => {
+  if (shortcutId === undefined) return undefined
+  return Array.isArray(shortcutId) ? shortcutId.join(",") : `${shortcutId}`
+}
 
 export const FabButton = defineComponent({
   name: "FabButton",
@@ -177,6 +188,39 @@ export const FabButton = defineComponent({
       focusSection(nextIndex)
     }
 
+    const handleWindowShortcutKeyDown = (event: KeyboardEvent) => {
+      if (!hasSectionActions.value) return
+
+      const shortcutSectionIndex = getShortcutSectionIndex(
+        normalizedSections.value,
+        event,
+        isDisabled.value
+      )
+      if (shortcutSectionIndex === null) return
+
+      const shortcutSection = normalizedSections.value[shortcutSectionIndex]
+      if (!shortcutSection?.onClick) return
+
+      const shortcutButton = rootRef.value?.querySelector<HTMLButtonElement>(
+        `button[data-section-index="${shortcutSectionIndex}"]`
+      )
+      if (!shortcutButton || shortcutButton.disabled) return
+
+      event.preventDefault()
+      if (toolbarMode.value) {
+        activeIndex.value = shortcutSectionIndex
+      }
+      shortcutButton.focus()
+      shortcutButton.click()
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", handleWindowShortcutKeyDown)
+      onUnmounted(() => {
+        window.removeEventListener("keydown", handleWindowShortcutKeyDown)
+      })
+    }
+
     return () => {
       configVersion.value
 
@@ -243,6 +287,8 @@ export const FabButton = defineComponent({
                   "aria-label": section.ariaLabel,
                   "data-section": section.key,
                   "data-section-index": index,
+                  "data-shortcut": toShortcutDataAttribute(section.shortcut),
+                  "data-shortcut-id": toShortcutIdDataAttribute(section.shortcutId),
                   onFocus: () => {
                     if (toolbarMode.value) activeIndex.value = index
                   },
@@ -293,6 +339,8 @@ export const FabButton = defineComponent({
                     : getSectionClasses({ ...section, theme: resolvedTheme }),
                 style: section.style,
                 "data-section": section.key,
+                "data-shortcut": toShortcutDataAttribute(section.shortcut),
+                "data-shortcut-id": toShortcutIdDataAttribute(section.shortcutId),
                 "aria-label": section.ariaLabel
               },
               resolveSectionContent(section.content)

@@ -5,6 +5,8 @@ export {
   createFabButtonConfig,
   getFabButtonConfig,
   getFabButtonCssMode,
-  resetFabButtonConfig
+  resetFabButtonConfig,
+  FAB_BUTTON_SHORTCUT_ID_TO_CODE,
+  FAB_BUTTON_SHORTCUT_CODE_TO_ID
 } from "@rezafab/fab-button-core"
 export type { FabButtonStyleConfig, FabButtonLibraryClassMap } from "@rezafab/fab-button-core"

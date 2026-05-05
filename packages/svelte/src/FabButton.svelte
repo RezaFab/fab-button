@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, tick } from "svelte"
+  import { createEventDispatcher, onDestroy, onMount, tick } from "svelte"
   import {
     getEnabledSectionIndices,
     getFabButtonTheme,
     getFabButtonClasses,
     getFabButtonCssVars,
+    getShortcutSectionIndex,
     getNavigationCommand,
     resolveSectionIndex,
     getSectionClasses,
@@ -45,6 +46,16 @@
       .filter(([, value]) => value !== "")
       .map(([key, value]) => `${key}: ${value}`)
       .join("; ")
+
+  const toShortcutDataAttribute = (shortcut: FabButtonSection["shortcut"]) => {
+    if (shortcut === undefined) return undefined
+    return Array.isArray(shortcut) ? shortcut.join(",") : `${shortcut}`
+  }
+
+  const toShortcutIdDataAttribute = (shortcutId: FabButtonSection["shortcutId"]) => {
+    if (shortcutId === undefined) return undefined
+    return Array.isArray(shortcutId) ? shortcutId.join(",") : `${shortcutId}`
+  }
 
   let activeIndex = -1
   let styleConfigVersion = 0
@@ -135,6 +146,34 @@
     activeIndex = nextIndex
     focusSection(nextIndex)
   }
+
+  const handleWindowShortcutKeydown = (event: KeyboardEvent) => {
+    if (!hasSectionActions) return
+
+    const shortcutSectionIndex = getShortcutSectionIndex(normalizedSections, event, isDisabled)
+    if (shortcutSectionIndex === null) return
+
+    const shortcutSection = normalizedSections[shortcutSectionIndex]
+    if (!shortcutSection?.onClick) return
+
+    const shortcutButton = sectionRefs[shortcutSectionIndex]
+    if (!shortcutButton || shortcutButton.disabled) return
+
+    event.preventDefault()
+    if (toolbarMode) {
+      activeIndex = shortcutSectionIndex
+    }
+    shortcutButton.focus()
+    shortcutButton.click()
+  }
+
+  onMount(() => {
+    if (typeof window === "undefined") return undefined
+    window.addEventListener("keydown", handleWindowShortcutKeydown)
+    return () => {
+      window.removeEventListener("keydown", handleWindowShortcutKeydown)
+    }
+  })
 </script>
 
 {#if hasSectionActions}
@@ -172,6 +211,8 @@
           aria-label={section.ariaLabel}
           data-section={section.key}
           data-section-index={index}
+          data-shortcut={toShortcutDataAttribute(section.shortcut)}
+          data-shortcut-id={toShortcutIdDataAttribute(section.shortcutId)}
           on:focus={() => {
             if (toolbarMode) activeIndex = index
           }}
@@ -208,6 +249,8 @@
           class={unstyled ? section.className : getSectionClasses({ ...section, theme: resolvedTheme })}
           style={section.style}
           data-section={section.key}
+          data-shortcut={toShortcutDataAttribute(section.shortcut)}
+          data-shortcut-id={toShortcutIdDataAttribute(section.shortcutId)}
           aria-label={section.ariaLabel}
         >
           {section.content}

@@ -2,6 +2,7 @@ import {
   getFabButtonClasses,
   getFabButtonTheme,
   getSectionClasses,
+  getShortcutSectionIndex,
   getNavigationCommand,
   resolveSectionIndex,
   subscribeFabButtonConfig
@@ -107,6 +108,37 @@ export class FabButtonElement extends HTMLElement {
     }
   }
 
+  private readonly onWindowKeyDown = (event: KeyboardEvent) => {
+    if (this.isDisabled()) return
+
+    const sections = this.getSectionElements()
+    if (!sections.length) return
+
+    const shortcutSectionIndex = getShortcutSectionIndex(
+      sections.map((section) => ({
+        key: section.dataset.section ?? "",
+        shortcut: section.dataset.shortcut,
+        shortcutId: this.parseSectionShortcutId(section.dataset.shortcutId),
+        disabled:
+          section.hasAttribute("disabled") || section.getAttribute("aria-disabled") === "true"
+      })),
+      event,
+      this.isDisabled()
+    )
+    if (shortcutSectionIndex === null) return
+
+    const shortcutSection = sections[shortcutSectionIndex]
+    if (!shortcutSection) return
+
+    event.preventDefault()
+    if (this.isToolbarMode()) {
+      this.activeSectionIndex = shortcutSectionIndex
+      this.syncRovingTabIndex()
+    }
+    shortcutSection.focus()
+    shortcutSection.click()
+  }
+
   connectedCallback() {
     this.unsubscribeConfig = subscribeFabButtonConfig(() => {
       this.refresh()
@@ -114,6 +146,9 @@ export class FabButtonElement extends HTMLElement {
     this.addEventListener("click", this.onHostClick)
     this.addEventListener("keydown", this.onHostKeyDown)
     this.addEventListener("focusin", this.onHostFocusIn)
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", this.onWindowKeyDown)
+    }
     this.refresh()
   }
 
@@ -123,6 +158,9 @@ export class FabButtonElement extends HTMLElement {
     this.removeEventListener("click", this.onHostClick)
     this.removeEventListener("keydown", this.onHostKeyDown)
     this.removeEventListener("focusin", this.onHostFocusIn)
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this.onWindowKeyDown)
+    }
   }
 
   attributeChangedCallback() {
@@ -153,6 +191,25 @@ export class FabButtonElement extends HTMLElement {
 
   private getSectionElements() {
     return Array.from(this.querySelectorAll<HTMLElement>("[data-section]"))
+  }
+
+  private parseSectionShortcutId(rawShortcutId: string | undefined) {
+    if (!rawShortcutId) return undefined
+
+    if (rawShortcutId.includes(",")) {
+      const ids = rawShortcutId
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+        .map((value) => Math.trunc(value))
+      return ids.length ? ids : undefined
+    }
+
+    const numericId = Number(rawShortcutId.trim())
+    if (!Number.isFinite(numericId)) return undefined
+    return Math.trunc(numericId)
   }
 
   private getEnabledSectionIndices() {

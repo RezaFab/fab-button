@@ -748,49 +748,23 @@ For section-action buttons, you can keep default tab navigation or switch to too
 
 ### Keyboard Shortcut Integration Example
 
-You can map full keyboard shortcuts (for example `C`, `S`, `V`) to trigger each section action directly.
+You can map keyboard shortcuts directly in each section without writing custom `window` listeners.
 
 ```tsx
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { FabButton } from "@rezafab/fab-button-react"
 
 export function KeyboardShortcutActions() {
-  const rootRef = useRef<HTMLDivElement | null>(null)
   const [lastAction, setLastAction] = useState("None")
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase()
-      const shortcutMap: Record<string, string> = {
-        c: "copy",
-        s: "share",
-        v: "save"
-      }
-      const sectionKey = shortcutMap[key]
-      if (!sectionKey) return
-
-      const sectionButton = rootRef.current?.querySelector<HTMLButtonElement>(
-        `button[data-section="${sectionKey}"]`
-      )
-      if (!sectionButton || sectionButton.disabled) return
-
-      event.preventDefault()
-      sectionButton.focus()
-      sectionButton.click()
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [])
-
   return (
-    <div ref={rootRef}>
+    <div>
       <FabButton
         keyboardNavigation="toolbar"
         sections={[
-          { key: "copy", content: "Copy", onClick: () => setLastAction("Copy") },
-          { key: "share", content: "Share", onClick: () => setLastAction("Share") },
-          { key: "save", content: "Save", onClick: () => setLastAction("Save") }
+          { key: "copy", shortcut: "1", content: "Copy", onClick: () => setLastAction("Copy") },
+          { key: "share", shortcutId: [16, 95], content: "Share", onClick: () => setLastAction("Share") },
+          { key: "save", shortcutId: 17, content: "Save", onClick: () => setLastAction("Save") }
         ]}
       />
       <p>Last action: {lastAction}</p>
@@ -799,7 +773,105 @@ export function KeyboardShortcutActions() {
 }
 ```
 
-This pattern lets keyboard users trigger the exact same section buttons, not a separate duplicated action path.
+Simple rule:
+
+- Use `shortcut` only when you want one direct number key.
+  Example: `shortcut: "1"` (matches key `1` / `Digit1`).
+- Use `shortcutId` when you want more than one mapping for the same section.
+  Example: `shortcutId: [16, 95]` to support `Digit2` and `Numpad2`.
+
+Reference:
+
+- `shortcutId: 16` = `Digit2` (top number row key `2`)
+- `shortcutId: 95` = `Numpad2`
+
+All shortcuts trigger the same section click path, so behavior stays consistent with mouse interaction.
+
+### Full Keyboard Shortcut ID Map
+
+FabButton exports the complete map:
+
+```ts
+import {
+  FAB_BUTTON_SHORTCUT_ID_TO_CODE,
+  FAB_BUTTON_SHORTCUT_CODE_TO_ID
+} from "@rezafab/fab-button"
+```
+
+Visual map is available in Storybook via story:
+
+- `FabButton/Examples -> FullKeyboardShortcutIdMap`
+
+### 100% Full-Size Keyboard (104 Keys)
+
+| ID | Code | ID | Code | ID | Code |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Escape | 2 | F1 | 3 | F2 |
+| 4 | F3 | 5 | F4 | 6 | F5 |
+| 7 | F6 | 8 | F7 | 9 | F8 |
+| 10 | F9 | 11 | F10 | 12 | F11 |
+| 13 | F12 | 14 | Backquote | 15 | Digit1 |
+| 16 | Digit2 | 17 | Digit3 | 18 | Digit4 |
+| 19 | Digit5 | 20 | Digit6 | 21 | Digit7 |
+| 22 | Digit8 | 23 | Digit9 | 24 | Digit0 |
+| 25 | Minus | 26 | Equal | 27 | Backspace |
+| 28 | Tab | 29 | KeyQ | 30 | KeyW |
+| 31 | KeyE | 32 | KeyR | 33 | KeyT |
+| 34 | KeyY | 35 | KeyU | 36 | KeyI |
+| 37 | KeyO | 38 | KeyP | 39 | BracketLeft |
+| 40 | BracketRight | 41 | Backslash | 42 | CapsLock |
+| 43 | KeyA | 44 | KeyS | 45 | KeyD |
+| 46 | KeyF | 47 | KeyG | 48 | KeyH |
+| 49 | KeyJ | 50 | KeyK | 51 | KeyL |
+| 52 | Semicolon | 53 | Quote | 54 | Enter |
+| 55 | ShiftLeft | 56 | KeyZ | 57 | KeyX |
+| 58 | KeyC | 59 | KeyV | 60 | KeyB |
+| 61 | KeyN | 62 | KeyM | 63 | Comma |
+| 64 | Period | 65 | Slash | 66 | ShiftRight |
+| 67 | ControlLeft | 68 | MetaLeft | 69 | AltLeft |
+| 70 | Space | 71 | AltRight | 72 | MetaRight |
+| 73 | ContextMenu | 74 | ControlRight | 75 | PrintScreen |
+| 76 | ScrollLock | 77 | Pause | 78 | Insert |
+| 79 | Home | 80 | PageUp | 81 | Delete |
+| 82 | End | 83 | PageDown | 84 | ArrowUp |
+| 85 | ArrowLeft | 86 | ArrowDown | 87 | ArrowRight |
+| 88 | NumLock | 89 | NumpadDivide | 90 | NumpadMultiply |
+| 91 | NumpadSubtract | 92 | NumpadAdd | 93 | NumpadEnter |
+| 94 | Numpad1 | 95 | Numpad2 | 96 | Numpad3 |
+| 97 | Numpad4 | 98 | Numpad5 | 99 | Numpad6 |
+| 100 | Numpad7 | 101 | Numpad8 | 102 | Numpad9 |
+| 103 | Numpad0 | 104 | NumpadDecimal |  |  |
+
+### Additional Keys (Non 100%)
+
+| ID | Code | ID | Code | ID | Code |
+| --- | --- | --- | --- | --- | --- |
+| 105 | IntlBackslash | 106 | IntlRo | 107 | IntlYen |
+| 108 | Convert | 109 | NonConvert | 110 | KanaMode |
+| 111 | Lang1 | 112 | Lang2 | 113 | F13 |
+| 114 | F14 | 115 | F15 | 116 | F16 |
+| 117 | F17 | 118 | F18 | 119 | F19 |
+| 120 | F20 | 121 | F21 | 122 | F22 |
+| 123 | F23 | 124 | F24 | 125 | NumpadEqual |
+| 126 | NumpadComma | 127 | NumpadParenLeft | 128 | NumpadParenRight |
+| 129 | Lang3 | 130 | Lang4 | 131 | Lang5 |
+| 132 | Fn | 133 | VolumeMute | 134 | VolumeDown |
+| 135 | VolumeUp | 136 | MediaTrackNext | 137 | MediaTrackPrevious |
+| 138 | MediaStop | 139 | MediaPlayPause | 140 | LaunchMail |
+| 141 | LaunchApp1 | 142 | LaunchApp2 | 143 | BrowserSearch |
+| 144 | BrowserHome | 145 | BrowserBack | 146 | BrowserForward |
+| 147 | BrowserRefresh | 148 | BrowserStop | 149 | BrowserFavorites |
+
+To generate all `1-149` keys automatically from source map:
+
+```ts
+import { FAB_BUTTON_SHORTCUT_ID_TO_CODE } from "@rezafab/fab-button"
+
+const allKeys = Object.entries(FAB_BUTTON_SHORTCUT_ID_TO_CODE).map(([id, code]) => ({
+  id: Number(id),
+  code
+}))
+```
 
 ## Development
 
