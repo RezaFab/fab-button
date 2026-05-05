@@ -2,6 +2,15 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.2.0] - 2026-05-05
+
+- Added `@rezafab/fab-button-theme-tokens` package with shared `tokens.css` variables and JS/TS token exports.
+- Refactored `@rezafab/fab-button-styles` to consume shared tokens for `cssMode: "manual"` defaults.
+- Added root package subpath exports for tokens:
+  - `./theme-tokens`
+  - `./theme-tokens/tokens.css`
+- Updated README with theme token package usage docs and roadmap completion.
+
 ## [1.1.0] - 2026-05-04
 
 - Added CSS mode configuration system (`manual` and `library`) with global runtime config.

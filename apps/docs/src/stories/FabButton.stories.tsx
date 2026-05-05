@@ -128,7 +128,10 @@ const KeyboardShortcutActionsDemo = () => {
 }
 
 export const KeyboardShortcutIntegration: Story = {
-  render: () => <KeyboardShortcutActionsDemo />
+  render: () => <KeyboardShortcutActionsDemo />,
+  args: {
+    sections: []
+  }
 }
 
 export const LegacyCSSIntegration: Story = {
