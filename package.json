@@ -32,7 +32,10 @@
     "packages/vue/dist",
     "packages/svelte/dist",
     "packages/element/dist",
-    "packages/styles/style.css"
+    "packages/styles/style.css",
+    "packages/theme-tokens/index.js",
+    "packages/theme-tokens/index.d.ts",
+    "packages/theme-tokens/tokens.css"
   ],
   "exports": {
     ".": {
@@ -71,6 +74,12 @@
     },
     "./element/style.css": "./packages/element/dist/fab-button-element.css",
     "./styles.css": "./packages/styles/style.css",
+    "./theme-tokens": {
+      "types": "./packages/theme-tokens/index.d.ts",
+      "import": "./packages/theme-tokens/index.js",
+      "default": "./packages/theme-tokens/index.js"
+    },
+    "./theme-tokens/tokens.css": "./packages/theme-tokens/tokens.css",
     "./package.json": "./package.json"
   },
   "sideEffects": [
@@ -90,6 +99,9 @@
     "version:merge": "npm version minor",
     "version:fix": "npm version patch",
     "release": "pnpm build && changeset publish"
+  },
+  "dependencies": {
+    "@rezafab/fab-button-theme-tokens": "workspace:*"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

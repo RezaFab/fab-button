@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@rezafab/fab-button-theme-tokens':
+        specifier: workspace:*
+        version: link:packages/theme-tokens
     devDependencies:
       '@changesets/cli':
         specifier: ^2.31.0
@@ -175,6 +179,10 @@ importers:
         version: 4.1.5(@types/node@25.6.0)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0))
 
   packages/styles:
+    dependencies:
+      '@rezafab/fab-button-theme-tokens':
+        specifier: workspace:*
+        version: link:../theme-tokens
     devDependencies:
       vitest:
         specifier: ^4.1.5
@@ -204,6 +212,12 @@ importers:
       vite-plugin-dts:
         specifier: ^4.5.4
         version: 4.5.4(@types/node@25.6.0)(rollup@4.60.2)(typescript@6.0.3)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0))
+      vitest:
+        specifier: ^4.1.5
+        version: 4.1.5(@types/node@25.6.0)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0))
+
+  packages/theme-tokens:
+    devDependencies:
       vitest:
         specifier: ^4.1.5
         version: 4.1.5(@types/node@25.6.0)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0))

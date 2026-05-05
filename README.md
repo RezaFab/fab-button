@@ -20,6 +20,7 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 
 - `@rezafab/fab-button-core`: core types and class/CSS-variable helpers
 - `@rezafab/fab-button-styles`: default `style.css`
+- `@rezafab/fab-button-theme-tokens`: shared theme tokens (`tokens.css` + JS token object)
 - `@rezafab/fab-button-react`: React `FabButton` component
 - `@rezafab/fab-button-vue`: Vue `FabButton` component
 - `@rezafab/fab-button-svelte`: Svelte `FabButton` component
@@ -53,7 +54,7 @@ FabButton now supports 2 CSS modes:
 
 The main goal is to make integration configurable through one app-level config file, without changing most component code.
 
-### 1) Create a config file in the consumer app
+### 1) Create a config file in your app
 
 Example file: `src/fab-button.config.ts`
 
@@ -689,6 +690,21 @@ If any section has `onClick`, `FabButton` uses a non-button group root and rende
 }
 ```
 
+## Theme Tokens Package
+
+Use the dedicated tokens package when you want one shared source for colors, spacing, radius, and interaction tokens.
+
+```bash
+pnpm add @rezafab/fab-button-theme-tokens
+```
+
+```ts
+import "@rezafab/fab-button-theme-tokens/tokens.css"
+import { fabButtonThemeTokens } from "@rezafab/fab-button-theme-tokens"
+```
+
+`tokens.css` exposes CSS variables that the default FabButton styles consume.
+
 ## Legacy CSS Integration
 
 FabButton avoids global selectors and relies on local classes (`.fab-button`, `.fab-button__section`) plus data attributes, so it can coexist with old CSS stacks with low collision risk.
@@ -795,5 +811,5 @@ pnpm storybook
 
 ## Roadmap
 
-- Add theme tokens package
+- [x] Add theme tokens package
 - Publish examples for non-bundler environments

@@ -12,6 +12,9 @@
   "exports": {
     "./style.css": "./style.css"
   },
+  "dependencies": {
+    "@rezafab/fab-button-theme-tokens": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^4.1.5"
   }
