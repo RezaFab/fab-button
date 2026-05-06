@@ -388,7 +388,7 @@ const KeyboardShortcutActionsDemo = () => {
     <div style={{ display: "grid", gap: "12px" }}>
       <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
         Built-in shortcuts: <strong>1</strong> (direct key), <strong>ID 16</strong> (Digit2),{" "}
-        <strong>ID 17</strong> (Digit3)
+        <strong>ID 17</strong> (Digit3). Shortcut hint badge is rendered automatically.
       </p>
       <FabButton
         keyboardNavigation="toolbar"
@@ -420,6 +420,136 @@ const KeyboardShortcutActionsDemo = () => {
 
 export const KeyboardShortcutIntegration: Story = {
   render: () => <KeyboardShortcutActionsDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const SectionConfirmFlowDemo = () => {
+  const [lastAction, setLastAction] = useState("None")
+
+  return (
+    <div style={{ display: "grid", gap: "12px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        Dangerous actions can require a built-in confirmation before running.
+      </p>
+      <FabButton
+        sections={[
+          {
+            key: "archive",
+            content: "Archive",
+            onClick: () => setLastAction("Archived")
+          },
+          {
+            key: "delete",
+            content: "Delete",
+            confirm: {
+              title: "Delete this item?",
+              description: "This action cannot be undone."
+            },
+            onClick: () => setLastAction("Deleted")
+          }
+        ]}
+      />
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last action: {lastAction}</p>
+    </div>
+  )
+}
+
+export const SectionConfirmFlow: Story = {
+  render: () => <SectionConfirmFlowDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const PerSectionAsyncStateDemo = () => {
+  const [manualState, setManualState] = useState<"idle" | "loading" | "success" | "error">("idle")
+
+  return (
+    <div style={{ display: "grid", gap: "12px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        Auto mode: return Promise from onClick. Manual mode: control asyncState directly.
+      </p>
+      <FabButton
+        sections={[
+          {
+            key: "save",
+            content: "Save",
+            asyncFeedbackDuration: 1300,
+            onClick: async () => {
+              await new Promise((resolve) => setTimeout(resolve, 900))
+            }
+          },
+          {
+            key: "publish",
+            content: "Publish",
+            asyncFeedbackDuration: 1600,
+            onClick: async () => {
+              await new Promise((_, reject) => setTimeout(() => reject(new Error("Publish failed")), 1000))
+            }
+          },
+          {
+            key: "sync",
+            content: "Sync",
+            asyncState: manualState
+          }
+        ]}
+      />
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <button type="button" onClick={() => setManualState("loading")}>
+          Manual Loading
+        </button>
+        <button type="button" onClick={() => setManualState("success")}>
+          Manual Success
+        </button>
+        <button type="button" onClick={() => setManualState("error")}>
+          Manual Error
+        </button>
+        <button type="button" onClick={() => setManualState("idle")}>
+          Manual Idle
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export const PerSectionAsyncState: Story = {
+  render: () => <PerSectionAsyncStateDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const ResponsiveOverflowModeDemo = () => {
+  const [lastAction, setLastAction] = useState("None")
+
+  return (
+    <div style={{ display: "grid", gap: "12px", maxWidth: "360px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        On small viewport, extra sections move into built-in More menu.
+      </p>
+      <FabButton
+        keyboardNavigation="toolbar"
+        overflowMode="more"
+        overflowBreakpoint={900}
+        overflowVisibleCount={2}
+        overflowMenuLabel="More"
+        sections={[
+          { key: "copy", content: "Copy", onClick: () => setLastAction("Copy") },
+          { key: "share", content: "Share", onClick: () => setLastAction("Share") },
+          { key: "save", content: "Save", onClick: () => setLastAction("Save") },
+          { key: "archive", content: "Archive", onClick: () => setLastAction("Archive") },
+          { key: "delete", content: "Delete", onClick: () => setLastAction("Delete") }
+        ]}
+      />
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last action: {lastAction}</p>
+    </div>
+  )
+}
+
+export const ResponsiveOverflowMode: Story = {
+  render: () => <ResponsiveOverflowModeDemo />,
   args: {
     sections: []
   }

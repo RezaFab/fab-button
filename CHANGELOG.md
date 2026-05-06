@@ -2,6 +2,15 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.4.0] - 2026-05-05
+
+- Added built-in section confirmation flow via modal popup (`confirm: true | { title, description }`) before section action handlers execute.
+- Added Storybook `SectionConfirmFlow` demo and README usage docs for React and Web Component confirmation setup.
+- Added per-section async feedback states (`loading`, `success`, `error`) with Promise-aware auto handling and manual `asyncState` override support.
+- Added `asyncFeedbackDuration` for per-section auto reset timing and Storybook `PerSectionAsyncState` example.
+- Added automatic shortcut hint UI from `shortcut` / `shortcutId` with standardized hint labels and `data-shortcut-hint` metadata.
+- Added responsive overflow mode (`More` menu) for small screens with `overflowMode`, `overflowBreakpoint`, `overflowVisibleCount`, and `overflowMenuLabel`.
+
 ## [1.3.0] - 2026-05-05
 
 - Added built-in section keyboard shortcuts via `shortcut` and `shortcutId` across React, Vue, Svelte, and Element adapters.

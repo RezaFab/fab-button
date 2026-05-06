@@ -44,6 +44,69 @@ const KEY_ALIASES: Record<string, string> = {
 
 const BASIC_CODE_PATTERN = /^(key[a-z]|digit[0-9]|numpad[a-z0-9]+|arrow(left|right|up|down)|f[0-9]{1,2})$/i
 
+const SHORTCUT_KEY_LABEL_OVERRIDES: Readonly<Record<string, string>> = Object.freeze({
+  " ": "Space",
+  escape: "Esc",
+  enter: "Enter",
+  tab: "Tab",
+  arrowleft: "Left",
+  arrowright: "Right",
+  arrowup: "Up",
+  arrowdown: "Down",
+  backspace: "Backspace",
+  delete: "Delete",
+  home: "Home",
+  end: "End",
+  pageup: "PgUp",
+  pagedown: "PgDn"
+})
+
+const SHORTCUT_CODE_LABEL_OVERRIDES: Readonly<Record<string, string>> = Object.freeze({
+  Escape: "Esc",
+  Backquote: "`",
+  Minus: "-",
+  Equal: "=",
+  Backspace: "Backspace",
+  Tab: "Tab",
+  BracketLeft: "[",
+  BracketRight: "]",
+  Backslash: "\\",
+  CapsLock: "Caps",
+  Semicolon: ";",
+  Quote: "'",
+  Enter: "Enter",
+  ShiftLeft: "Shift",
+  ShiftRight: "Shift",
+  ControlLeft: "Ctrl",
+  ControlRight: "Ctrl",
+  MetaLeft: "Meta",
+  MetaRight: "Meta",
+  AltLeft: "Alt",
+  AltRight: "Alt",
+  Space: "Space",
+  ContextMenu: "Menu",
+  PrintScreen: "PrtSc",
+  ScrollLock: "Scroll",
+  Pause: "Pause",
+  Insert: "Insert",
+  Delete: "Delete",
+  Home: "Home",
+  End: "End",
+  PageUp: "PgUp",
+  PageDown: "PgDn",
+  ArrowUp: "Up",
+  ArrowLeft: "Left",
+  ArrowDown: "Down",
+  ArrowRight: "Right",
+  NumLock: "NumLock",
+  NumpadDivide: "Num /",
+  NumpadMultiply: "Num *",
+  NumpadSubtract: "Num -",
+  NumpadAdd: "Num +",
+  NumpadEnter: "Num Enter",
+  NumpadDecimal: "Num ."
+})
+
 export const FAB_BUTTON_SHORTCUT_ID_TO_CODE: Readonly<Record<number, string>> = Object.freeze({
   1: "Escape",
   2: "F1",
@@ -207,6 +270,13 @@ const KNOWN_SHORTCUT_CODES = new Set(
   Object.values(FAB_BUTTON_SHORTCUT_ID_TO_CODE).map((value) => value.trim().toLowerCase())
 )
 
+const KNOWN_SHORTCUT_CODE_CANONICAL_BY_NORMALIZED = Object.freeze(
+  Object.values(FAB_BUTTON_SHORTCUT_ID_TO_CODE).reduce<Record<string, string>>((map, code) => {
+    map[code.trim().toLowerCase()] = code
+    return map
+  }, {})
+)
+
 const normalizeKeyValue = (value: string) => {
   const trimmed = value.trim()
   if (!trimmed) return ""
@@ -350,6 +420,117 @@ const toShortcutIds = (shortcutId: unknown): number[] => {
   if (Array.isArray(normalized)) return normalized
   if (typeof normalized === "number") return [normalized]
   return []
+}
+
+const toShortcutCodeLabel = (rawCode: string) => {
+  const normalizedCode = normalizeCodeValue(rawCode)
+  if (!normalizedCode) return null
+
+  const canonicalCode =
+    KNOWN_SHORTCUT_CODE_CANONICAL_BY_NORMALIZED[normalizedCode] ?? rawCode.trim()
+
+  if (SHORTCUT_CODE_LABEL_OVERRIDES[canonicalCode]) {
+    return SHORTCUT_CODE_LABEL_OVERRIDES[canonicalCode]
+  }
+
+  if (/^Key[A-Z]$/.test(canonicalCode)) return canonicalCode.replace("Key", "")
+  if (/^Digit[0-9]$/.test(canonicalCode)) return canonicalCode.replace("Digit", "")
+  if (/^Numpad[0-9]$/.test(canonicalCode)) return `Num${canonicalCode.replace("Numpad", "")}`
+  if (/^F[0-9]{1,2}$/.test(canonicalCode)) return canonicalCode
+  if (canonicalCode.startsWith("Numpad")) return canonicalCode.replace("Numpad", "Num ")
+
+  return canonicalCode
+}
+
+const toShortcutKeyLabel = (rawKey: string) => {
+  const normalizedKey = normalizeKeyValue(rawKey)
+  if (!normalizedKey) return null
+
+  if (SHORTCUT_KEY_LABEL_OVERRIDES[normalizedKey]) {
+    return SHORTCUT_KEY_LABEL_OVERRIDES[normalizedKey]
+  }
+
+  if (normalizedKey.length === 1) return normalizedKey.toUpperCase()
+
+  return normalizedKey.charAt(0).toUpperCase() + normalizedKey.slice(1)
+}
+
+const toShortcutLabelFromValue = (value: FabButtonShortcutKey): string | null => {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null
+    const numeric = Math.trunc(value)
+    if (numeric >= 0 && numeric <= 9) return `${numeric}`
+    return `KeyCode ${numeric}`
+  }
+
+  const raw = `${value}`.trim()
+  if (!raw) return null
+
+  const lowered = raw.toLowerCase()
+
+  if (lowered.startsWith("id:") || lowered.startsWith("shortcutid:")) {
+    const tokenPrefix = lowered.startsWith("id:") ? "id:" : "shortcutid:"
+    const numeric = lowered.slice(tokenPrefix.length).trim()
+    if (!/^\d+$/.test(numeric)) return null
+    const code = FAB_BUTTON_SHORTCUT_ID_TO_CODE[Number(numeric)]
+    if (!code) return `ID ${Number(numeric)}`
+    return toShortcutCodeLabel(code) ?? code
+  }
+
+  if (lowered.startsWith("keycode:")) {
+    const numeric = lowered.slice("keycode:".length).trim()
+    if (!/^\d+$/.test(numeric)) return null
+    return `KeyCode ${Number(numeric)}`
+  }
+
+  if (lowered.startsWith("code:")) {
+    return toShortcutCodeLabel(lowered.slice("code:".length))
+  }
+
+  if (lowered.startsWith("key:")) {
+    return toShortcutKeyLabel(lowered.slice("key:".length))
+  }
+
+  if (/^\d+$/.test(raw)) {
+    const numeric = Number(raw)
+    if (raw.length === 1 && numeric >= 0 && numeric <= 9) return raw
+    return `KeyCode ${numeric}`
+  }
+
+  const codeToken = toCodeToken(raw)
+  if (codeToken) {
+    return toShortcutCodeLabel(codeToken.replace("code:", ""))
+  }
+
+  return toShortcutKeyLabel(raw)
+}
+
+export const getSectionShortcutHint = (
+  section: Pick<FabButtonSectionBase, "shortcut" | "shortcutId">
+) => {
+  const labels: string[] = []
+
+  const pushLabel = (label: string | null) => {
+    if (!label) return
+    if (labels.includes(label)) return
+    labels.push(label)
+  }
+
+  toShortcutValues(section.shortcut).forEach((value) => {
+    pushLabel(toShortcutLabelFromValue(value))
+  })
+
+  toShortcutIds(section.shortcutId).forEach((shortcutId) => {
+    const code = FAB_BUTTON_SHORTCUT_ID_TO_CODE[shortcutId]
+    if (!code) {
+      pushLabel(`ID ${shortcutId}`)
+      return
+    }
+    pushLabel(toShortcutCodeLabel(code) ?? code)
+  })
+
+  if (!labels.length) return null
+  return labels.join(" / ")
 }
 
 const getSectionShortcutTokens = (section: FabButtonSectionBase) => {

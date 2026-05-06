@@ -3,6 +3,7 @@ import type {
   FabButtonKeyboardNavigation,
   FabButtonKeyboardOrientation,
   FabButtonLayout,
+  FabButtonOverflowMode,
   FabButtonSectionBase,
   FabButtonShape,
   FabButtonSize,
@@ -14,7 +15,7 @@ export interface FabButtonSection extends FabButtonSectionBase {
   content: ReactNode
   className?: string
   style?: CSSProperties
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void | Promise<unknown>
 }
 
 export interface FabButtonProps {
@@ -36,5 +37,9 @@ export interface FabButtonProps {
   keyboardNavigation?: FabButtonKeyboardNavigation
   keyboardOrientation?: FabButtonKeyboardOrientation
   loopNavigation?: boolean
+  overflowMode?: FabButtonOverflowMode
+  overflowBreakpoint?: number
+  overflowVisibleCount?: number
+  overflowMenuLabel?: string
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
 }

@@ -2,11 +2,14 @@ import {
   getFabButtonClasses,
   getFabButtonTheme,
   getSectionClasses,
+  getSectionShortcutHint,
   getShortcutSectionIndex,
   getNavigationCommand,
+  resolveSectionConfirmPrompt,
   resolveSectionIndex,
   subscribeFabButtonConfig
 } from "@rezafab/fab-button-core"
+import type { FabButtonResolvedSectionConfirm } from "@rezafab/fab-button-core"
 
 type FabButtonElementAttributes =
   | "variant"
@@ -43,6 +46,10 @@ export class FabButtonElement extends HTMLElement {
   private activeSectionIndex = -1
   private managedHostClasses = new Set<string>()
   private unsubscribeConfig: (() => void) | undefined
+  private pendingConfirmSection: HTMLElement | null = null
+  private confirmBypassSection: HTMLElement | null = null
+  private confirmDialogElement: HTMLElement | null = null
+  private confirmDialogCleanup: (() => void) | null = null
 
   static get observedAttributes() {
     return OBSERVED_ATTRIBUTES
@@ -65,6 +72,35 @@ export class FabButtonElement extends HTMLElement {
         composed: true
       })
     )
+  }
+
+  private readonly onHostClickCapture = (event: Event) => {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+
+    const section = target.closest<HTMLElement>("[data-section]")
+    if (!section || !this.contains(section)) return
+    if (this.confirmBypassSection === section) {
+      this.confirmBypassSection = null
+      return
+    }
+
+    const confirm = this.parseSectionConfirm(section)
+    if (!confirm) return
+
+    const fallbackTitle = section.getAttribute("aria-label") || section.dataset.section || section.textContent?.trim()
+    const confirmPrompt = resolveSectionConfirmPrompt(
+      { confirm },
+      {
+        fallbackTitle
+      }
+    )
+    if (!confirmPrompt) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+    this.openConfirmDialog(section, confirmPrompt)
   }
 
   private readonly onHostKeyDown = (event: KeyboardEvent) => {
@@ -120,7 +156,9 @@ export class FabButtonElement extends HTMLElement {
         shortcut: section.dataset.shortcut,
         shortcutId: this.parseSectionShortcutId(section.dataset.shortcutId),
         disabled:
-          section.hasAttribute("disabled") || section.getAttribute("aria-disabled") === "true"
+          section.hasAttribute("disabled") ||
+          section.getAttribute("aria-disabled") === "true" ||
+          section.dataset.asyncState === "loading"
       })),
       event,
       this.isDisabled()
@@ -143,6 +181,7 @@ export class FabButtonElement extends HTMLElement {
     this.unsubscribeConfig = subscribeFabButtonConfig(() => {
       this.refresh()
     })
+    this.addEventListener("click", this.onHostClickCapture, true)
     this.addEventListener("click", this.onHostClick)
     this.addEventListener("keydown", this.onHostKeyDown)
     this.addEventListener("focusin", this.onHostFocusIn)
@@ -155,6 +194,8 @@ export class FabButtonElement extends HTMLElement {
   disconnectedCallback() {
     this.unsubscribeConfig?.()
     this.unsubscribeConfig = undefined
+    this.closeConfirmDialog()
+    this.removeEventListener("click", this.onHostClickCapture, true)
     this.removeEventListener("click", this.onHostClick)
     this.removeEventListener("keydown", this.onHostKeyDown)
     this.removeEventListener("focusin", this.onHostFocusIn)
@@ -212,10 +253,158 @@ export class FabButtonElement extends HTMLElement {
     return Math.trunc(numericId)
   }
 
+  private parseSectionConfirm(section: HTMLElement) {
+    const hasConfirmAttribute = section.hasAttribute("data-confirm")
+    const rawConfirm = section.dataset.confirm?.trim().toLowerCase()
+    const title = section.dataset.confirmTitle?.trim()
+    const description = section.dataset.confirmDescription?.trim()
+
+    const hasPromptContent = Boolean(title || description)
+    if (!hasConfirmAttribute && !hasPromptContent) return undefined
+
+    if (rawConfirm === "false" || rawConfirm === "0" || rawConfirm === "no") return undefined
+
+    if (!hasPromptContent) return true
+
+    return {
+      title,
+      description
+    }
+  }
+
+  private syncSectionShortcutHint(section: HTMLElement) {
+    const shortcutHint = getSectionShortcutHint({
+      shortcut: section.dataset.shortcut,
+      shortcutId: this.parseSectionShortcutId(section.dataset.shortcutId)
+    })
+
+    const existingHintNode = section.querySelector<HTMLElement>('[data-fab-shortcut-hint="true"]')
+
+    if (!shortcutHint) {
+      section.removeAttribute("data-shortcut-hint")
+      existingHintNode?.remove()
+      return
+    }
+
+    section.dataset.shortcutHint = shortcutHint
+
+    if (!existingHintNode) {
+      const hintNode = document.createElement("span")
+      hintNode.className = "fab-button__shortcut-hint"
+      hintNode.dataset.fabShortcutHint = "true"
+      hintNode.setAttribute("aria-hidden", "true")
+      hintNode.textContent = shortcutHint
+      section.appendChild(hintNode)
+      return
+    }
+
+    existingHintNode.textContent = shortcutHint
+  }
+
+  private closeConfirmDialog() {
+    this.confirmDialogCleanup?.()
+    this.confirmDialogCleanup = null
+
+    if (this.confirmDialogElement?.isConnected) {
+      this.confirmDialogElement.remove()
+    }
+    this.confirmDialogElement = null
+    this.pendingConfirmSection = null
+  }
+
+  private proceedConfirmedSectionAction() {
+    const targetSection = this.pendingConfirmSection
+    this.closeConfirmDialog()
+    if (!targetSection) return
+    if (targetSection.hasAttribute("disabled") || targetSection.getAttribute("aria-disabled") === "true") return
+
+    this.confirmBypassSection = targetSection
+    targetSection.focus()
+    targetSection.click()
+  }
+
+  private openConfirmDialog(section: HTMLElement, prompt: FabButtonResolvedSectionConfirm) {
+    if (typeof document === "undefined") return
+
+    this.closeConfirmDialog()
+    this.pendingConfirmSection = section
+
+    const backdrop = document.createElement("div")
+    backdrop.className = "fab-button-confirm__backdrop"
+    backdrop.dataset.theme = this.dataset.theme || this.getAttribute("theme") || getFabButtonTheme()
+    backdrop.setAttribute("role", "presentation")
+
+    const dialog = document.createElement("div")
+    dialog.className = "fab-button-confirm"
+    dialog.setAttribute("role", "dialog")
+    dialog.setAttribute("aria-modal", "true")
+    dialog.setAttribute("aria-label", prompt.title)
+    dialog.addEventListener("click", (event) => {
+      event.stopPropagation()
+    })
+
+    const title = document.createElement("h3")
+    title.className = "fab-button-confirm__title"
+    title.textContent = prompt.title
+    dialog.appendChild(title)
+
+    if (prompt.description) {
+      const description = document.createElement("p")
+      description.className = "fab-button-confirm__description"
+      description.textContent = prompt.description
+      dialog.appendChild(description)
+    }
+
+    const actions = document.createElement("div")
+    actions.className = "fab-button-confirm__actions"
+
+    const cancelButton = document.createElement("button")
+    cancelButton.type = "button"
+    cancelButton.className = "fab-button-confirm__button fab-button-confirm__button--cancel"
+    cancelButton.textContent = prompt.cancelText
+    cancelButton.addEventListener("click", () => {
+      this.closeConfirmDialog()
+    })
+
+    const confirmButton = document.createElement("button")
+    confirmButton.type = "button"
+    confirmButton.className = "fab-button-confirm__button fab-button-confirm__button--confirm"
+    confirmButton.textContent = prompt.confirmText
+    confirmButton.addEventListener("click", () => {
+      this.proceedConfirmedSectionAction()
+    })
+
+    actions.appendChild(cancelButton)
+    actions.appendChild(confirmButton)
+    dialog.appendChild(actions)
+
+    backdrop.appendChild(dialog)
+    backdrop.addEventListener("click", () => {
+      this.closeConfirmDialog()
+    })
+
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      this.closeConfirmDialog()
+    }
+
+    document.addEventListener("keydown", onDocumentKeyDown)
+    this.confirmDialogCleanup = () => {
+      document.removeEventListener("keydown", onDocumentKeyDown)
+    }
+    document.body.appendChild(backdrop)
+    this.confirmDialogElement = backdrop
+  }
+
   private getEnabledSectionIndices() {
     if (this.isDisabled()) return []
     return this.getSectionElements().reduce<number[]>((enabled, section, index) => {
-      if (!section.hasAttribute("disabled") && section.getAttribute("aria-disabled") !== "true") {
+      if (
+        !section.hasAttribute("disabled") &&
+        section.getAttribute("aria-disabled") !== "true" &&
+        section.dataset.asyncState !== "loading"
+      ) {
         enabled.push(index)
       }
       return enabled
@@ -303,10 +492,21 @@ export class FabButtonElement extends HTMLElement {
         })
       )
       section.dataset.sectionIndex = String(index)
+      this.syncSectionShortcutHint(section)
+      const isSectionLoading = section.dataset.asyncState === "loading"
       if (disabled) {
         section.setAttribute("aria-disabled", "true")
       } else {
-        section.removeAttribute("aria-disabled")
+        if (isSectionLoading) {
+          section.setAttribute("aria-disabled", "true")
+        } else {
+          section.removeAttribute("aria-disabled")
+        }
+      }
+      if (isSectionLoading) {
+        section.setAttribute("aria-busy", "true")
+      } else {
+        section.removeAttribute("aria-busy")
       }
     })
 

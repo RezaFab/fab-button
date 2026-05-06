@@ -1,12 +1,15 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount, tick } from "svelte"
   import {
+    type FabButtonSectionAsyncState,
     getEnabledSectionIndices,
     getFabButtonTheme,
     getFabButtonClasses,
     getFabButtonCssVars,
     getShortcutSectionIndex,
     getNavigationCommand,
+    getSectionShortcutHint,
+    resolveSectionConfirmPrompt,
     resolveSectionIndex,
     getSectionClasses,
     subscribeFabButtonConfig,
@@ -15,6 +18,11 @@
   import type { FabButtonProps, FabButtonSection } from "./types"
 
   import "@rezafab/fab-button-styles/style.css"
+
+  const AUTO_ASYNC_FEEDBACK_MS = 1600
+
+  const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
+    Boolean(value) && typeof (value as { then?: unknown }).then === "function"
 
   export let sections: FabButtonSection[] = []
   export let variant: NonNullable<FabButtonProps["variant"]> = "default"
@@ -34,6 +42,10 @@
   export let keyboardNavigation: NonNullable<FabButtonProps["keyboardNavigation"]> = "tab"
   export let keyboardOrientation: FabButtonProps["keyboardOrientation"] = undefined
   export let loopNavigation = true
+  export let overflowMode: NonNullable<FabButtonProps["overflowMode"]> = "none"
+  export let overflowBreakpoint = 768
+  export let overflowVisibleCount = 2
+  export let overflowMenuLabel = "More"
   export let onClick: FabButtonProps["onClick"] = undefined
 
   const dispatch = createEventDispatcher<{
@@ -58,22 +70,135 @@
   }
 
   let activeIndex = -1
+  let pendingConfirm:
+    | {
+        sectionIndex: number
+        title: string
+        description?: string
+        confirmText: string
+        cancelText: string
+      }
+    | null = null
+  let pendingConfirmBypassIndex: number | null = null
+  let runtimeAsyncStates: Record<string, FabButtonSectionAsyncState> = {}
+  const asyncResetTimers = new Map<string, ReturnType<typeof globalThis.setTimeout>>()
   let styleConfigVersion = 0
   let sectionRefs: Array<HTMLButtonElement | null> = []
+  let rootRef: HTMLDivElement | null = null
+  let isCompactViewport = false
+  let overflowMenuOpen = false
   const unsubscribeConfig = subscribeFabButtonConfig(() => {
     styleConfigVersion += 1
   })
 
   onDestroy(() => {
+    Array.from(asyncResetTimers.keys()).forEach((sectionKey) => {
+      const timer = asyncResetTimers.get(sectionKey)
+      if (!timer) return
+      globalThis.clearTimeout(timer)
+      asyncResetTimers.delete(sectionKey)
+    })
     unsubscribeConfig()
   })
 
   $: normalizedSections = normalizeSections(sections ?? [])
+  $: {
+    const validKeys = new Set(normalizedSections.map((section) => section.key))
+    const nextState: Record<string, FabButtonSectionAsyncState> = {}
+    let changed = false
+
+    for (const [sectionKey, sectionState] of Object.entries(runtimeAsyncStates)) {
+      if (!validKeys.has(sectionKey)) {
+        const timer = asyncResetTimers.get(sectionKey)
+        if (timer) {
+          globalThis.clearTimeout(timer)
+          asyncResetTimers.delete(sectionKey)
+        }
+        changed = true
+        continue
+      }
+      nextState[sectionKey] = sectionState
+    }
+
+    if (changed || Object.keys(nextState).length !== Object.keys(runtimeAsyncStates).length) {
+      runtimeAsyncStates = nextState
+    }
+  }
+
+  const getSectionAsyncState = (section: FabButtonSection): FabButtonSectionAsyncState => {
+    if (section.asyncState !== undefined) return section.asyncState
+    return runtimeAsyncStates[section.key] ?? "idle"
+  }
+
+  const clearAsyncResetTimer = (sectionKey: string) => {
+    const timer = asyncResetTimers.get(sectionKey)
+    if (!timer) return
+    globalThis.clearTimeout(timer)
+    asyncResetTimers.delete(sectionKey)
+  }
+
+  const scheduleAsyncStateReset = (section: FabButtonSection) => {
+    clearAsyncResetTimer(section.key)
+    const timer = globalThis.setTimeout(() => {
+      if (section.asyncState !== undefined) return
+      if (runtimeAsyncStates[section.key] === undefined) return
+      const nextState = { ...runtimeAsyncStates }
+      delete nextState[section.key]
+      runtimeAsyncStates = nextState
+      asyncResetTimers.delete(section.key)
+    }, section.asyncFeedbackDuration ?? AUTO_ASYNC_FEEDBACK_MS)
+    asyncResetTimers.set(section.key, timer)
+  }
+
+  const startAsyncSectionAction = (section: FabButtonSection, result: unknown) => {
+    if (section.asyncState !== undefined) return
+    if (!isPromiseLike(result)) return
+
+    clearAsyncResetTimer(section.key)
+    runtimeAsyncStates = { ...runtimeAsyncStates, [section.key]: "loading" }
+
+    Promise.resolve(result)
+      .then(() => {
+        runtimeAsyncStates = { ...runtimeAsyncStates, [section.key]: "success" }
+        scheduleAsyncStateReset(section)
+      })
+      .catch(() => {
+        runtimeAsyncStates = { ...runtimeAsyncStates, [section.key]: "error" }
+        scheduleAsyncStateReset(section)
+      })
+  }
+
   $: hasSectionActions = normalizedSections.some((section) => Boolean(section.onClick))
   $: isDisabled = disabled || loading
   $: toolbarMode = hasSectionActions && keyboardNavigation === "toolbar"
   $: resolvedKeyboardOrientation = keyboardOrientation ?? (layout === "grid" ? "both" : "horizontal")
-  $: enabledIndices = getEnabledSectionIndices(normalizedSections, isDisabled)
+  $: safeOverflowVisibleCount = Math.max(1, Math.trunc(overflowVisibleCount))
+  $: sectionEntries = normalizedSections.map((section, index) => ({ section, index }))
+  $: isOverflowEnabled =
+    hasSectionActions && overflowMode === "more" && sectionEntries.length > safeOverflowVisibleCount
+  $: isOverflowActive = isOverflowEnabled && isCompactViewport
+  $: visibleSectionEntries = isOverflowActive
+    ? sectionEntries.slice(0, safeOverflowVisibleCount)
+    : sectionEntries
+  $: overflowSectionEntries = isOverflowActive ? sectionEntries.slice(safeOverflowVisibleCount) : []
+  $: if (typeof window !== "undefined") {
+    isCompactViewport = isOverflowEnabled ? window.innerWidth <= overflowBreakpoint : false
+  }
+  $: hiddenOverflowIndexSet =
+    isOverflowActive && !overflowMenuOpen ? new Set(overflowSectionEntries.map((entry) => entry.index)) : new Set()
+  $: sectionsForInteraction = normalizedSections.map((section) => {
+    const sectionAsyncState = getSectionAsyncState(section)
+    return {
+      ...section,
+      disabled: section.disabled || sectionAsyncState === "loading"
+    }
+  })
+  $: enabledIndices = getEnabledSectionIndices(sectionsForInteraction, isDisabled).filter(
+    (index) => !hiddenOverflowIndexSet.has(index)
+  )
+  $: if (!isOverflowActive) {
+    overflowMenuOpen = false
+  }
   $: if (toolbarMode) {
     if (!enabledIndices.length) {
       activeIndex = -1
@@ -103,9 +228,70 @@
     dispatch("click", event)
   }
 
-  const handleSectionClick = (section: FabButtonSection, event: MouseEvent) => {
-    section.onClick?.(event)
+  const handleSectionClick = (
+    section: FabButtonSection,
+    sectionIndex: number,
+    event: MouseEvent,
+    options?: { closeOverflowMenuOnClick?: boolean }
+  ) => {
+    if (options?.closeOverflowMenuOnClick) {
+      overflowMenuOpen = false
+    }
+
+    const sectionAsyncState = getSectionAsyncState(section)
+    if (sectionAsyncState === "loading") {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    if (pendingConfirmBypassIndex === sectionIndex) {
+      pendingConfirmBypassIndex = null
+      const confirmedResult = section.onClick?.(event)
+      startAsyncSectionAction(section, confirmedResult)
+      dispatch("sectionClick", { key: section.key, event })
+      return
+    }
+
+    const fallbackTitle =
+      typeof section.content === "string" || typeof section.content === "number"
+        ? `${section.content}`
+        : section.ariaLabel || section.key
+    const confirmPrompt = resolveSectionConfirmPrompt(section, { fallbackTitle })
+    if (confirmPrompt) {
+      event.preventDefault()
+      event.stopPropagation()
+      overflowMenuOpen = false
+      pendingConfirm = {
+        sectionIndex,
+        title: confirmPrompt.title,
+        description: confirmPrompt.description,
+        confirmText: confirmPrompt.confirmText,
+        cancelText: confirmPrompt.cancelText
+      }
+      return
+    }
+
+    const clickResult = section.onClick?.(event)
+    startAsyncSectionAction(section, clickResult)
     dispatch("sectionClick", { key: section.key, event })
+  }
+
+  const closeConfirmDialog = () => {
+    pendingConfirm = null
+  }
+
+  const proceedConfirmedSectionAction = () => {
+    if (!pendingConfirm) return
+
+    const nextIndex = pendingConfirm.sectionIndex
+    pendingConfirm = null
+    const targetButton = sectionRefs[nextIndex]
+    if (!targetButton || targetButton.disabled) return
+
+    pendingConfirmBypassIndex = nextIndex
+    targetButton.focus()
+    targetButton.click()
   }
 
   const focusSection = async (index: number) => {
@@ -149,11 +335,24 @@
 
   const handleWindowShortcutKeydown = (event: KeyboardEvent) => {
     if (!hasSectionActions) return
+    if (pendingConfirm) {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        pendingConfirm = null
+      }
+      return
+    }
 
-    const shortcutSectionIndex = getShortcutSectionIndex(normalizedSections, event, isDisabled)
+    if (overflowMenuOpen && event.key === "Escape") {
+      event.preventDefault()
+      overflowMenuOpen = false
+      return
+    }
+
+    const shortcutSectionIndex = getShortcutSectionIndex(sectionsForInteraction, event, isDisabled)
     if (shortcutSectionIndex === null) return
 
-    const shortcutSection = normalizedSections[shortcutSectionIndex]
+    const shortcutSection = sectionsForInteraction[shortcutSectionIndex]
     if (!shortcutSection?.onClick) return
 
     const shortcutButton = sectionRefs[shortcutSectionIndex]
@@ -163,21 +362,46 @@
     if (toolbarMode) {
       activeIndex = shortcutSectionIndex
     }
-    shortcutButton.focus()
+    if (shortcutButton.offsetParent !== null) {
+      shortcutButton.focus()
+    }
     shortcutButton.click()
   }
 
   onMount(() => {
     if (typeof window === "undefined") return undefined
+
+    const syncViewportCompactState = () => {
+      if (!isOverflowEnabled) {
+        isCompactViewport = false
+        return
+      }
+      isCompactViewport = window.innerWidth <= overflowBreakpoint
+    }
+
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      if (!overflowMenuOpen) return
+      const target = event.target as Node | null
+      if (!target) return
+      if (rootRef?.contains(target)) return
+      overflowMenuOpen = false
+    }
+
+    syncViewportCompactState()
     window.addEventListener("keydown", handleWindowShortcutKeydown)
+    window.addEventListener("resize", syncViewportCompactState)
+    document.addEventListener("mousedown", handleDocumentMouseDown)
     return () => {
       window.removeEventListener("keydown", handleWindowShortcutKeydown)
+      window.removeEventListener("resize", syncViewportCompactState)
+      document.removeEventListener("mousedown", handleDocumentMouseDown)
     }
   })
 </script>
 
 {#if hasSectionActions}
   <div
+    bind:this={rootRef}
     class={rootClassName}
     style={rootStyle}
     role={toolbarMode ? "toolbar" : "group"}
@@ -200,29 +424,149 @@
         Loading...
       </span>
     {:else}
-      {#each normalizedSections as section, index (section.key)}
+      {#each visibleSectionEntries as entry (entry.section.key)}
+        {@const section = entry.section}
+        {@const index = entry.index}
+        {@const sectionAsyncState = getSectionAsyncState(section)}
+        {@const sectionShortcutHint = getSectionShortcutHint(section)}
         <button
           use:registerSection={index}
           type="button"
-          class={unstyled ? section.className : getSectionClasses({ ...section, interactive: true, theme: resolvedTheme })}
+          class={unstyled
+            ? section.className
+            : getSectionClasses({
+                ...section,
+                disabled: isDisabled || section.disabled || sectionAsyncState === "loading",
+                interactive: true,
+                theme: resolvedTheme
+              })}
           style={section.style}
-          disabled={isDisabled || section.disabled}
+          disabled={isDisabled || section.disabled || sectionAsyncState === "loading"}
           tabindex={toolbarMode ? (index === activeIndex ? 0 : -1) : undefined}
           aria-label={section.ariaLabel}
+          aria-busy={sectionAsyncState === "loading" ? "true" : undefined}
           data-section={section.key}
           data-section-index={index}
           data-shortcut={toShortcutDataAttribute(section.shortcut)}
           data-shortcut-id={toShortcutIdDataAttribute(section.shortcutId)}
+          data-shortcut-hint={sectionShortcutHint ?? undefined}
+          data-async-state={sectionAsyncState !== "idle" ? sectionAsyncState : undefined}
           on:focus={() => {
             if (toolbarMode) activeIndex = index
           }}
-          on:click={(event) => handleSectionClick(section, event)}
+          on:click={(event) => handleSectionClick(section, index, event)}
         >
           {section.content}
+          {#if !unstyled && sectionShortcutHint}
+            <span class="fab-button__shortcut-hint" aria-hidden="true">{sectionShortcutHint}</span>
+          {/if}
         </button>
       {/each}
+      {#if isOverflowActive && overflowSectionEntries.length}
+        <div class="fab-button__overflow">
+          <button
+            type="button"
+            class={unstyled
+              ? undefined
+              : getSectionClasses({
+                  interactive: true,
+                  theme: resolvedTheme
+                })}
+            aria-haspopup="menu"
+            aria-expanded={overflowMenuOpen ? "true" : "false"}
+            data-overflow-trigger="true"
+            on:click={() => {
+              overflowMenuOpen = !overflowMenuOpen
+            }}
+          >
+            {overflowMenuLabel}
+          </button>
+          <div class="fab-button__overflow-menu" role="menu" hidden={!overflowMenuOpen} data-open={overflowMenuOpen ? "true" : "false"}>
+            {#each overflowSectionEntries as entry (entry.section.key)}
+              {@const section = entry.section}
+              {@const index = entry.index}
+              {@const sectionAsyncState = getSectionAsyncState(section)}
+              {@const sectionShortcutHint = getSectionShortcutHint(section)}
+              <button
+                use:registerSection={index}
+                type="button"
+                role="menuitem"
+                class={unstyled
+                  ? section.className
+                  : getSectionClasses({
+                      ...section,
+                      disabled: isDisabled || section.disabled || sectionAsyncState === "loading",
+                      interactive: true,
+                      theme: resolvedTheme
+                    })}
+                style={section.style}
+                disabled={isDisabled || section.disabled || sectionAsyncState === "loading"}
+                tabindex={toolbarMode ? (index === activeIndex ? 0 : -1) : undefined}
+                aria-label={section.ariaLabel}
+                aria-busy={sectionAsyncState === "loading" ? "true" : undefined}
+                data-section={section.key}
+                data-section-index={index}
+                data-shortcut={toShortcutDataAttribute(section.shortcut)}
+                data-shortcut-id={toShortcutIdDataAttribute(section.shortcutId)}
+                data-shortcut-hint={sectionShortcutHint ?? undefined}
+                data-async-state={sectionAsyncState !== "idle" ? sectionAsyncState : undefined}
+                data-overflow-item="true"
+                on:focus={() => {
+                  if (toolbarMode) activeIndex = index
+                }}
+                on:click={(event) => handleSectionClick(section, index, event, { closeOverflowMenuOnClick: true })}
+              >
+                {section.content}
+                {#if !unstyled && sectionShortcutHint}
+                  <span class="fab-button__shortcut-hint" aria-hidden="true">{sectionShortcutHint}</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
     {/if}
   </div>
+
+  {#if pendingConfirm}
+    <div
+      class="fab-button-confirm__backdrop"
+      data-theme={resolvedTheme}
+      role="presentation"
+      on:click={(event) => {
+        if (event.target !== event.currentTarget) return
+        closeConfirmDialog()
+      }}
+    >
+      <div
+        class="fab-button-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-label={pendingConfirm.title}
+      >
+        <h3 class="fab-button-confirm__title">{pendingConfirm.title}</h3>
+        {#if pendingConfirm.description}
+          <p class="fab-button-confirm__description">{pendingConfirm.description}</p>
+        {/if}
+        <div class="fab-button-confirm__actions">
+          <button
+            type="button"
+            class="fab-button-confirm__button fab-button-confirm__button--cancel"
+            on:click={closeConfirmDialog}
+          >
+            {pendingConfirm.cancelText}
+          </button>
+          <button
+            type="button"
+            class="fab-button-confirm__button fab-button-confirm__button--confirm"
+            on:click={proceedConfirmedSectionAction}
+          >
+            {pendingConfirm.confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 {:else}
   <button
     type="button"
@@ -245,15 +589,20 @@
       </span>
     {:else}
       {#each normalizedSections as section (section.key)}
+        {@const sectionShortcutHint = getSectionShortcutHint(section)}
         <span
           class={unstyled ? section.className : getSectionClasses({ ...section, theme: resolvedTheme })}
           style={section.style}
           data-section={section.key}
           data-shortcut={toShortcutDataAttribute(section.shortcut)}
           data-shortcut-id={toShortcutIdDataAttribute(section.shortcutId)}
+          data-shortcut-hint={sectionShortcutHint ?? undefined}
           aria-label={section.ariaLabel}
         >
           {section.content}
+          {#if !unstyled && sectionShortcutHint}
+            <span class="fab-button__shortcut-hint" aria-hidden="true">{sectionShortcutHint}</span>
+          {/if}
         </span>
       {/each}
     {/if}

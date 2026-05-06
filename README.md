@@ -633,6 +633,95 @@ If any section has `onClick`, `FabButton` uses a non-button group root and rende
 />
 ```
 
+## Built-in Section Confirmation
+
+Use `confirm` on a section to require user confirmation before `onClick` runs.
+
+- `confirm: true` uses the built-in FabButton confirm modal with default text.
+- `confirm: { title, description }` uses the same modal with custom message text.
+
+```tsx
+<FabButton
+  sections={[
+    { key: "archive", content: "Archive", onClick: () => console.log("archive") },
+    {
+      key: "delete",
+      content: "Delete",
+      confirm: {
+        title: "Delete this item?",
+        description: "This action cannot be undone."
+      },
+      onClick: () => console.log("delete")
+    }
+  ]}
+/>
+```
+
+For Web Component sections, use data attributes:
+
+```html
+<fab-button keyboard-navigation="toolbar">
+  <button data-section="archive">Archive</button>
+  <button
+    data-section="delete"
+    data-confirm="true"
+    data-confirm-title="Delete this item?"
+    data-confirm-description="This action cannot be undone."
+  >
+    Delete
+  </button>
+</fab-button>
+```
+
+## Per-Section Async State
+
+Each section can expose async feedback state:
+
+- `loading`
+- `success`
+- `error`
+
+Two usage modes:
+
+- Auto mode: return a `Promise` from section `onClick`, and FabButton will automatically show `loading` then `success`/`error`.
+- Manual mode: set `asyncState` directly (`"loading" | "success" | "error"`) from your own app state.
+
+```tsx
+<FabButton
+  sections={[
+    {
+      key: "save",
+      content: "Save",
+      onClick: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 900))
+      }
+    },
+    {
+      key: "publish",
+      content: "Publish",
+      onClick: async () => {
+        await new Promise((_, reject) => setTimeout(() => reject(new Error("Failed")), 900))
+      }
+    },
+    {
+      key: "sync",
+      content: "Sync",
+      asyncState: "loading"
+    }
+  ]}
+/>
+```
+
+Optional reset timing for auto mode:
+
+- `asyncFeedbackDuration` (milliseconds) on each section.
+
+Web Component manual state can use:
+
+- `data-async-state="loading"`
+- `data-async-state="success"`
+- `data-async-state="error"`
+
 ## Layout Examples
 
 ### Horizontal layout (default)
@@ -677,6 +766,37 @@ If any section has `onClick`, `FabButton` uses a non-button group root and rende
   ]}
 />
 ```
+
+## Responsive Overflow Mode (More Menu)
+
+Use overflow mode to keep the button compact on small screens.
+
+```tsx
+<FabButton
+  overflowMode="more"
+  overflowBreakpoint={768}
+  overflowVisibleCount={2}
+  overflowMenuLabel="More"
+  sections={[
+    { key: "copy", content: "Copy", onClick: () => {} },
+    { key: "share", content: "Share", onClick: () => {} },
+    { key: "save", content: "Save", onClick: () => {} },
+    { key: "archive", content: "Archive", onClick: () => {} }
+  ]}
+/>
+```
+
+Behavior:
+
+- `overflowMode="none"`: default, all sections rendered inline.
+- `overflowMode="more"`: when viewport width is `<= overflowBreakpoint`, only the first `overflowVisibleCount` sections stay inline.
+- Remaining sections move into a built-in `More` dropdown.
+
+Props:
+
+- `overflowBreakpoint` default: `768`
+- `overflowVisibleCount` default: `2`
+- `overflowMenuLabel` default: `"More"`
 
 ## Custom CSS Override
 
@@ -787,6 +907,30 @@ Reference:
 
 All shortcuts trigger the same section click path, so behavior stays consistent with mouse interaction.
 
+### Automatic Shortcut Hint UI
+
+Shortcut hints are rendered automatically from `shortcut` / `shortcutId` on each section.
+
+```tsx
+<FabButton
+  sections={[
+    { key: "copy", shortcut: "1", content: "Copy", onClick: () => {} },
+    { key: "share", shortcutId: [16, 95], content: "Share", onClick: () => {} }
+  ]}
+/>
+```
+
+Result in default styled mode:
+
+- `Copy` shows badge `1`
+- `Share` shows badge `2 / Num2`
+
+For React/Vue/Svelte `unstyled` mode, the visual badge is skipped, but metadata still exists via:
+
+- `data-shortcut`
+- `data-shortcut-id`
+- `data-shortcut-hint`
+
 ### Full Keyboard Shortcut ID Map
 
 FabButton exports the complete map:
@@ -884,3 +1028,7 @@ pnpm storybook
 ## Roadmap
 
 - Publish examples for non-bundler environments
+- Role/permission guard helpers (`visibleWhen`, `disabledWhen`)
+- Split-button preset (primary action + dropdown actions)
+- Action analytics hook (`onSectionAction`) with source metadata (`click`, `shortcut`, `keyboard-nav`)
+- Interactive playground + code generator for React, Vue, Svelte, and Element usage
