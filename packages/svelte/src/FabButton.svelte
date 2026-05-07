@@ -214,6 +214,14 @@
   $: safeOverflowVisibleCount = Math.max(1, Math.trunc(overflowVisibleCount))
   $: sectionEntries = resolvedSections.map((section, index) => ({ section, index }))
   $: isSplitButtonEnabled = hasSectionActions && actionPreset === "split" && sectionEntries.length > 1
+  $: if (!isSplitButtonEnabled) {
+    splitPrimarySectionKey = null
+  } else if (
+    splitPrimarySectionKey !== null &&
+    !sectionEntries.some((entry) => entry.section.key === splitPrimarySectionKey)
+  ) {
+    splitPrimarySectionKey = sectionEntries[0]?.section.key ?? null
+  }
   $: splitPrimarySectionEntry =
     !isSplitButtonEnabled
       ? null
@@ -222,11 +230,6 @@
         : sectionEntries.find((entry) => entry.section.key === splitPrimarySectionKey) ??
           sectionEntries[0] ??
           null
-  $: if (!isSplitButtonEnabled) {
-    splitPrimarySectionKey = null
-  } else if (splitPrimarySectionEntry) {
-    splitPrimarySectionKey = splitPrimarySectionEntry.section.key
-  }
   $: isOverflowEnabled =
     !isSplitButtonEnabled &&
     hasSectionActions &&
