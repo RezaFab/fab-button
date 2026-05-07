@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
-import { FAB_BUTTON_SHORTCUT_ID_TO_CODE, FabButton } from "@rezafab/fab-button-react"
+import { FAB_BUTTON_SHORTCUT_ID_TO_CODE, FabButton } from "../../../../packages/react/src"
 
 
 const meta = {
@@ -280,7 +280,7 @@ const KeyboardLayoutMap = () => {
     <section className="kbd-map">
       <header className="kbd-map__header">
         <h2>FAB Button Keyboard Mapping 1-149</h2>
-        <p>ID shortcut dan KeyboardEvent.code dalam format tabel.</p>
+        <p>Shortcut IDs and KeyboardEvent.code values in table format.</p>
       </header>
 
       <article className="kbd-map__panel">
@@ -550,6 +550,131 @@ const ResponsiveOverflowModeDemo = () => {
 
 export const ResponsiveOverflowMode: Story = {
   render: () => <ResponsiveOverflowModeDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const SplitButtonPresetDemo = () => {
+  const [lastAction, setLastAction] = useState("None")
+
+  return (
+    <div style={{ display: "grid", gap: "12px", maxWidth: "360px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        Click an action from the dropdown: the last selected action becomes the primary button.
+      </p>
+      <FabButton
+        keyboardNavigation="toolbar"
+        actionPreset="split"
+        sections={[
+          { key: "save", content: "Save", onClick: () => setLastAction("Save") },
+          { key: "publish", content: "Publish", onClick: () => setLastAction("Publish") },
+          { key: "archive", content: "Archive", onClick: () => setLastAction("Archive") },
+          { key: "delete", content: "Delete", onClick: () => setLastAction("Delete") }
+        ]}
+      />
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last action: {lastAction}</p>
+    </div>
+  )
+}
+
+export const SplitButtonPreset: Story = {
+  render: () => <SplitButtonPresetDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const MultiSplitButtonsDemo = () => {
+  const [lastActions, setLastActions] = useState<Record<string, string>>({
+    file: "Save",
+    export: "Export PDF",
+    share: "Share Link"
+  })
+
+  const setGroupAction = (group: string, action: string) => {
+    setLastActions((previous) => ({
+      ...previous,
+      [group]: action
+    }))
+  }
+
+  return (
+    <div style={{ display: "grid", gap: "12px", maxWidth: "860px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        You can use more than one split button: each button has its own dropdown menu.
+      </p>
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <FabButton
+          keyboardNavigation="toolbar"
+          actionPreset="split"
+          sections={[
+            { key: "save", content: "Save", onClick: () => setGroupAction("file", "Save") },
+            { key: "save-as", content: "Save As", onClick: () => setGroupAction("file", "Save As") },
+            { key: "duplicate", content: "Duplicate", onClick: () => setGroupAction("file", "Duplicate") }
+          ]}
+        />
+        <FabButton
+          keyboardNavigation="toolbar"
+          actionPreset="split"
+          sections={[
+            { key: "pdf", content: "Export PDF", onClick: () => setGroupAction("export", "Export PDF") },
+            { key: "png", content: "Export PNG", onClick: () => setGroupAction("export", "Export PNG") },
+            { key: "csv", content: "Export CSV", onClick: () => setGroupAction("export", "Export CSV") }
+          ]}
+        />
+        <FabButton
+          keyboardNavigation="toolbar"
+          actionPreset="split"
+          sections={[
+            { key: "link", content: "Share Link", onClick: () => setGroupAction("share", "Share Link") },
+            { key: "email", content: "Send Email", onClick: () => setGroupAction("share", "Send Email") },
+            { key: "slack", content: "Send Slack", onClick: () => setGroupAction("share", "Send Slack") }
+          ]}
+        />
+      </div>
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>
+        Last actions: File ({lastActions.file}), Export ({lastActions.export}), Share ({lastActions.share})
+      </p>
+    </div>
+  )
+}
+
+export const MultiSplitButtons: Story = {
+  render: () => <MultiSplitButtonsDemo />,
+  args: {
+    sections: []
+  }
+}
+
+const ActionAnalyticsHookDemo = () => {
+  const [lastAction, setLastAction] = useState("None")
+  const [lastSource, setLastSource] = useState("None")
+
+  return (
+    <div style={{ display: "grid", gap: "12px", maxWidth: "380px" }}>
+      <p style={{ margin: 0, fontSize: "14px", color: "#475569" }}>
+        Track action source from click, shortcut, or keyboard navigation.
+      </p>
+      <FabButton
+        keyboardNavigation="toolbar"
+        sections={[
+          { key: "copy", shortcut: "1", content: "Copy", onClick: () => setLastAction("Copy") },
+          { key: "share", shortcutId: 16, content: "Share", onClick: () => setLastAction("Share") },
+          { key: "save", content: "Save", onClick: () => setLastAction("Save") }
+        ]}
+        onSectionAction={(meta) => {
+          setLastSource(meta.source)
+        }}
+      />
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last action: {lastAction}</p>
+      <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>Last source: {lastSource}</p>
+    </div>
+  )
+}
+
+export const ActionAnalyticsHook: Story = {
+  render: () => <ActionAnalyticsHookDemo />,
   args: {
     sections: []
   }

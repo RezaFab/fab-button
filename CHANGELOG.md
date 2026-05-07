@@ -2,6 +2,24 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.5.0] - 2026-05-07
+
+- Added role/permission section guard helpers: `visibleWhen(...)` and `disabledWhen(...)`.
+- Added runtime section guard resolution across React, Vue, and Svelte adapters:
+  - `visibleWhen` hides sections before rendering and interaction registration.
+  - `disabledWhen` marks sections as disabled while preserving existing `disabled` and async loading behavior.
+- Added split-button preset for grouped actions across React, Vue, and Svelte adapters:
+  - `actionPreset: "split"` keeps the first section as primary action.
+  - Remaining sections are moved into a built-in dropdown menu.
+  - Added `splitButtonMenuLabel` to customize the split dropdown trigger icon/symbol (default: `\u25BE`).
+  - Added `splitButtonTriggerSide` (`"left" | "right"`) to position split trigger.
+  - Last selected dropdown action is promoted to the next primary action.
+- Added action analytics hook across React, Vue, Svelte, and Element adapters:
+  - `onSectionAction` callback with metadata `{ key, index, source }`.
+  - Web Component emits native `section-action` event with the same metadata payload.
+  - Source metadata includes `click`, `shortcut`, and `keyboard-nav`.
+- Updated adapter re-exports (`@rezafab/fab-button-react`, `@rezafab/fab-button-vue`, `@rezafab/fab-button-svelte`, `@rezafab/fab-button-element`) to expose guard helpers and `FabButtonSectionGuard` type.
+
 ## [1.4.0] - 2026-05-05
 
 - Added built-in section confirmation flow via modal popup (`confirm: true | { title, description }`) before section action handlers execute.

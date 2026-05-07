@@ -10,16 +10,24 @@ export type FabButtonKeyboardNavigation = "tab" | "toolbar"
 
 export type FabButtonKeyboardOrientation = "horizontal" | "vertical" | "both"
 export type FabButtonOverflowMode = "none" | "more"
+export type FabButtonActionPreset = "default" | "split"
 export type FabButtonShortcutKey = string | number
 export type FabButtonSectionShortcut = FabButtonShortcutKey | FabButtonShortcutKey[]
 export type FabButtonShortcutId = number
 export type FabButtonSectionShortcutId = FabButtonShortcutId | FabButtonShortcutId[]
 export type FabButtonSectionAsyncState = "idle" | "loading" | "success" | "error"
+export type FabButtonSectionActionSource = "click" | "shortcut" | "keyboard-nav"
+export interface FabButtonSectionActionMeta {
+  key: string
+  index: number
+  source: FabButtonSectionActionSource
+}
 export interface FabButtonSectionConfirmConfig {
   title?: string
   description?: string
 }
 export type FabButtonSectionConfirm = boolean | FabButtonSectionConfirmConfig
+export type FabButtonSectionGuard<TSection> = boolean | ((section: TSection) => boolean)
 
 export type FabButtonCssMode = "manual" | "library"
 
@@ -35,6 +43,8 @@ export interface FabButtonSectionBase {
   asyncFeedbackDuration?: number
   className?: string
   disabled?: boolean
+  visibleWhen?: FabButtonSectionGuard<FabButtonSectionBase>
+  disabledWhen?: FabButtonSectionGuard<FabButtonSectionBase>
   ariaLabel?: string
 }
 

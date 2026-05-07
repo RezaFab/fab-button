@@ -1,6 +1,7 @@
 import { Fragment, computed, defineComponent, h, mergeProps, nextTick, onUnmounted, ref, watch } from "vue"
 import type { PropType } from "vue"
 import {
+  type FabButtonSectionActionSource,
   type FabButtonSectionAsyncState,
   getEnabledSectionIndices,
   getFabButtonTheme,
@@ -13,13 +14,16 @@ import {
   resolveSectionIndex,
   getSectionClasses,
   subscribeFabButtonConfig,
-  normalizeSections
+  normalizeSections,
+  isSectionVisible,
+  isSectionDisabled
 } from "@rezafab/fab-button-core"
 import type { FabButtonProps, FabButtonSection, FabButtonSectionContent } from "./types"
 
 import "@rezafab/fab-button-styles/style.css"
 
 const AUTO_ASYNC_FEEDBACK_MS = 1600
+const KEYBOARD_ACTIVATION_KEYS = new Set(["Enter", " ", "Spacebar"])
 
 const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
   Boolean(value) && typeof (value as { then?: unknown }).then === "function"
@@ -124,6 +128,18 @@ export const FabButton = defineComponent({
       type: String as PropType<FabButtonProps["overflowMode"]>,
       default: "none"
     },
+    actionPreset: {
+      type: String as PropType<FabButtonProps["actionPreset"]>,
+      default: "default"
+    },
+    splitButtonMenuLabel: {
+      type: String,
+      default: "\u25BE"
+    },
+    splitButtonTriggerSide: {
+      type: String as PropType<FabButtonProps["splitButtonTriggerSide"]>,
+      default: "right"
+    },
     overflowBreakpoint: {
       type: Number,
       default: 768
@@ -136,6 +152,10 @@ export const FabButton = defineComponent({
       type: String,
       default: "More"
     },
+    onSectionAction: {
+      type: Function as PropType<FabButtonProps["onSectionAction"]>,
+      default: undefined
+    },
     onClick: {
       type: Function as PropType<FabButtonProps["onClick"]>,
       default: undefined
@@ -143,7 +163,8 @@ export const FabButton = defineComponent({
   },
   emits: {
     click: (_event: MouseEvent) => true,
-    "section-click": (_key: string, _event: MouseEvent) => true
+    "section-click": (_key: string, _event: MouseEvent) => true,
+    "section-action": (_payload: { key: string; index: number; source: FabButtonSectionActionSource }) => true
   },
   setup(props, { attrs, emit }) {
     const configVersion = ref(0)
@@ -158,19 +179,31 @@ export const FabButton = defineComponent({
     const activeIndex = ref(-1)
     const pendingConfirm = ref<{
       sectionIndex: number
+      source: FabButtonSectionActionSource
       title: string
       description?: string
       confirmText: string
       cancelText: string
     } | null>(null)
     const pendingConfirmBypassIndex = ref<number | null>(null)
+    const pendingSectionActionSource = ref<{
+      sectionIndex: number
+      source: FabButtonSectionActionSource
+    } | null>(null)
     const runtimeAsyncStates = ref<Record<string, FabButtonSectionAsyncState>>({})
     const asyncResetTimers = new Map<string, ReturnType<typeof globalThis.setTimeout>>()
     const isCompactViewport = ref(false)
     const overflowMenuOpen = ref(false)
+    const splitPrimarySectionKey = ref<string | null>(null)
     const normalizedSections = computed(() => normalizeSections(props.sections ?? []))
+    const resolvedSections = computed(() =>
+      normalizedSections.value.filter((section) => isSectionVisible(section)).map((section) => ({
+        ...section,
+        disabled: isSectionDisabled(section)
+      }))
+    )
     const hasSectionActions = computed(() =>
-      normalizedSections.value.some((section) => Boolean(section.onClick))
+      resolvedSections.value.some((section) => Boolean(section.onClick))
     )
     const isDisabled = computed(() => props.disabled || props.loading)
     const toolbarMode = computed(
@@ -184,7 +217,7 @@ export const FabButton = defineComponent({
       return runtimeAsyncStates.value[section.key] ?? "idle"
     }
     const sectionsForInteraction = computed(() =>
-      normalizedSections.value.map((section) => {
+      resolvedSections.value.map((section) => {
         const sectionAsyncState = getSectionAsyncState(section)
         return {
           ...section,
@@ -194,25 +227,53 @@ export const FabButton = defineComponent({
     )
     const safeOverflowVisibleCount = computed(() => Math.max(1, Math.trunc(props.overflowVisibleCount ?? 2)))
     const sectionEntries = computed(() =>
-      normalizedSections.value.map((section, index) => ({ section, index }))
+      resolvedSections.value.map((section, index) => ({ section, index }))
     )
+    const isSplitButtonEnabled = computed(
+      () =>
+        hasSectionActions.value &&
+        props.actionPreset === "split" &&
+        sectionEntries.value.length > 1
+    )
+    const splitPrimarySectionEntry = computed(() => {
+      if (!isSplitButtonEnabled.value) return null
+      if (!sectionEntries.value.length) return null
+      if (splitPrimarySectionKey.value === null) return sectionEntries.value[0]
+      return (
+        sectionEntries.value.find((entry) => entry.section.key === splitPrimarySectionKey.value) ??
+        sectionEntries.value[0]
+      )
+    })
     const isOverflowEnabled = computed(
       () =>
+        !isSplitButtonEnabled.value &&
         hasSectionActions.value &&
         props.overflowMode === "more" &&
         sectionEntries.value.length > safeOverflowVisibleCount.value
     )
     const isOverflowActive = computed(() => isOverflowEnabled.value && isCompactViewport.value)
+    const isCollapsibleMenuActive = computed(
+      () => isSplitButtonEnabled.value || isOverflowActive.value
+    )
     const visibleSectionEntries = computed(() => {
+      if (isSplitButtonEnabled.value) {
+        return splitPrimarySectionEntry.value ? [splitPrimarySectionEntry.value] : []
+      }
       if (!isOverflowActive.value) return sectionEntries.value
       return sectionEntries.value.slice(0, safeOverflowVisibleCount.value)
     })
     const overflowSectionEntries = computed(() => {
+      if (isSplitButtonEnabled.value) {
+        if (!splitPrimarySectionEntry.value) return []
+        return sectionEntries.value.filter(
+          (entry) => entry.section.key !== splitPrimarySectionEntry.value?.section.key
+        )
+      }
       if (!isOverflowActive.value) return []
       return sectionEntries.value.slice(safeOverflowVisibleCount.value)
     })
     const hiddenOverflowIndexSet = computed(() => {
-      if (!isOverflowActive.value || overflowMenuOpen.value) return new Set<number>()
+      if (!isCollapsibleMenuActive.value || overflowMenuOpen.value) return new Set<number>()
       return new Set(overflowSectionEntries.value.map((entry) => entry.index))
     })
     const enabledIndices = computed(() =>
@@ -226,6 +287,25 @@ export const FabButton = defineComponent({
       if (!timer) return
       globalThis.clearTimeout(timer)
       asyncResetTimers.delete(sectionKey)
+    }
+
+    const setPendingSectionActionSource = (
+      sectionIndex: number,
+      source: FabButtonSectionActionSource
+    ) => {
+      pendingSectionActionSource.value = { sectionIndex, source }
+    }
+
+    const resolveSectionActionSource = (
+      sectionIndex: number,
+      event: MouseEvent
+    ): FabButtonSectionActionSource => {
+      const pendingSource = pendingSectionActionSource.value
+      if (pendingSource && pendingSource.sectionIndex === sectionIndex) {
+        pendingSectionActionSource.value = null
+        return pendingSource.source
+      }
+      return event.detail === 0 ? "keyboard-nav" : "click"
     }
 
     const scheduleAsyncStateReset = (section: FabButtonSection) => {
@@ -263,6 +343,19 @@ export const FabButton = defineComponent({
     }
 
     watch(
+      [isSplitButtonEnabled, splitPrimarySectionEntry],
+      ([splitEnabled, primaryEntry]) => {
+        if (!splitEnabled) {
+          splitPrimarySectionKey.value = null
+          return
+        }
+        if (!primaryEntry) return
+        splitPrimarySectionKey.value = primaryEntry.section.key
+      },
+      { immediate: true }
+    )
+
+    watch(
       [toolbarMode, enabledIndices],
       () => {
         if (!toolbarMode.value) return
@@ -278,7 +371,7 @@ export const FabButton = defineComponent({
     )
 
     watch(
-      normalizedSections,
+      resolvedSections,
       (sections) => {
         const validKeys = new Set(sections.map((section) => section.key))
         const nextState = { ...runtimeAsyncStates.value }
@@ -312,7 +405,7 @@ export const FabButton = defineComponent({
       { immediate: true }
     )
 
-    watch(isOverflowActive, (active) => {
+    watch(isCollapsibleMenuActive, (active) => {
       if (!active) {
         overflowMenuOpen.value = false
       }
@@ -333,15 +426,23 @@ export const FabButton = defineComponent({
     const handleToolbarKeyDown = (event: KeyboardEvent) => {
       if (!toolbarMode.value || !enabledIndices.value.length) return
 
-      const command = getNavigationCommand(event.key, keyboardOrientation.value)
-      if (!command) return
-
       const target = event.target as HTMLElement | null
       const sectionButton = target?.closest<HTMLButtonElement>("button[data-section-index]")
       if (!sectionButton) return
 
       const indexValue = Number(sectionButton.dataset.sectionIndex)
       const currentIndex = Number.isNaN(indexValue) ? activeIndex.value : indexValue
+
+      if (KEYBOARD_ACTIVATION_KEYS.has(event.key)) {
+        event.preventDefault()
+        setPendingSectionActionSource(currentIndex, "keyboard-nav")
+        sectionButton.click()
+        return
+      }
+
+      const command = getNavigationCommand(event.key, keyboardOrientation.value)
+      if (!command) return
+
       const nextIndex = resolveSectionIndex({
         command,
         currentIndex,
@@ -360,6 +461,7 @@ export const FabButton = defineComponent({
       if (pendingConfirm.value) {
         if (event.key === "Escape") {
           event.preventDefault()
+          pendingSectionActionSource.value = null
           pendingConfirm.value = null
         }
         return
@@ -393,16 +495,19 @@ export const FabButton = defineComponent({
       if (shortcutButton.offsetParent !== null) {
         shortcutButton.focus()
       }
+      setPendingSectionActionSource(shortcutSectionIndex, "shortcut")
       shortcutButton.click()
     }
 
     const closeConfirmDialog = () => {
+      pendingSectionActionSource.value = null
       pendingConfirm.value = null
     }
 
     const proceedConfirmedSectionAction = () => {
       if (!pendingConfirm.value) return
       const nextIndex = pendingConfirm.value.sectionIndex
+      const nextSource = pendingConfirm.value.source
       pendingConfirm.value = null
 
       const targetButton = rootRef.value?.querySelector<HTMLButtonElement>(
@@ -412,6 +517,7 @@ export const FabButton = defineComponent({
 
       pendingConfirmBypassIndex.value = nextIndex
       targetButton.focus()
+      setPendingSectionActionSource(nextIndex, nextSource)
       targetButton.click()
     }
 
@@ -470,6 +576,8 @@ export const FabButton = defineComponent({
         "data-size": props.size,
         "data-shape": props.shape,
         "data-theme": resolvedTheme,
+        "data-action-preset": props.actionPreset,
+        "data-split-trigger-side": props.splitButtonTriggerSide,
         "data-disabled": isDisabled.value ? "true" : undefined
       }
 
@@ -517,10 +625,17 @@ export const FabButton = defineComponent({
             "data-shortcut-id": toShortcutIdDataAttribute(section.shortcutId),
             "data-shortcut-hint": sectionShortcutHint ?? undefined,
             "data-overflow-item": options?.overflowItem ? "true" : undefined,
+            "data-split-primary":
+              isSplitButtonEnabled.value &&
+              splitPrimarySectionEntry.value?.section.key === section.key
+                ? "true"
+                : undefined,
             onFocus: () => {
               if (toolbarMode.value) activeIndex.value = index
             },
             onClick: (event: MouseEvent) => {
+              const sectionActionSource = resolveSectionActionSource(index, event)
+
               if (options?.closeOverflowMenuOnClick) {
                 overflowMenuOpen.value = false
               }
@@ -534,7 +649,19 @@ export const FabButton = defineComponent({
 
               if (pendingConfirmBypassIndex.value === index) {
                 pendingConfirmBypassIndex.value = null
+                if (isSplitButtonEnabled.value && section.onClick) {
+                  splitPrimarySectionKey.value = section.key
+                }
                 const confirmedResult = section.onClick?.(event)
+                if (section.onClick) {
+                  const meta = {
+                    key: section.key,
+                    index,
+                    source: sectionActionSource
+                  }
+                  props.onSectionAction?.(meta)
+                  emit("section-action", meta)
+                }
                 startAsyncSectionAction(section, confirmedResult)
                 emit("section-click", section.key, event)
                 return
@@ -549,6 +676,7 @@ export const FabButton = defineComponent({
                 overflowMenuOpen.value = false
                 pendingConfirm.value = {
                   sectionIndex: index,
+                  source: sectionActionSource,
                   title: confirmPrompt.title,
                   description: confirmPrompt.description,
                   confirmText: confirmPrompt.confirmText,
@@ -558,6 +686,18 @@ export const FabButton = defineComponent({
               }
 
               const clickResult = section.onClick?.(event)
+              if (isSplitButtonEnabled.value && section.onClick) {
+                splitPrimarySectionKey.value = section.key
+              }
+              if (section.onClick) {
+                const meta = {
+                  key: section.key,
+                  index,
+                  source: sectionActionSource
+                }
+                props.onSectionAction?.(meta)
+                emit("section-action", meta)
+              }
               startAsyncSectionAction(section, clickResult)
               emit("section-click", section.key, event)
             }
@@ -593,9 +733,15 @@ export const FabButton = defineComponent({
               ...visibleSectionEntries.value.map(({ section, index }) =>
                 renderSectionActionButton(section, index)
               ),
-              ...(isOverflowActive.value && overflowSectionEntries.value.length
+              ...(isCollapsibleMenuActive.value && overflowSectionEntries.value.length
                 ? [
-                    h("div", { class: "fab-button__overflow" }, [
+                    h(
+                      "div",
+                      {
+                        class: "fab-button__overflow",
+                        "data-split": isSplitButtonEnabled.value ? "true" : undefined
+                      },
+                      [
                       h(
                         "button",
                         {
@@ -608,12 +754,23 @@ export const FabButton = defineComponent({
                               }),
                           "aria-haspopup": "menu",
                           "aria-expanded": overflowMenuOpen.value ? "true" : "false",
+                          "aria-label": isSplitButtonEnabled.value ? "More actions" : undefined,
                           "data-overflow-trigger": "true",
+                          "data-split-trigger": isSplitButtonEnabled.value ? "true" : undefined,
                           onClick: () => {
                             overflowMenuOpen.value = !overflowMenuOpen.value
                           }
                         },
-                        props.overflowMenuLabel
+                        isSplitButtonEnabled.value
+                          ? h(
+                              "span",
+                              {
+                                class: "fab-button__split-trigger-icon",
+                                "aria-hidden": "true"
+                              },
+                              props.splitButtonMenuLabel
+                            )
+                          : props.overflowMenuLabel
                       ),
                       h(
                         "div",
@@ -631,7 +788,8 @@ export const FabButton = defineComponent({
                           })
                         )
                       )
-                    ])
+                    ]
+                    )
                   ]
                 : [])
             ]
@@ -715,7 +873,7 @@ export const FabButton = defineComponent({
             },
             "Loading..."
           )
-        : normalizedSections.value.map((section) => {
+        : resolvedSections.value.map((section) => {
             const sectionShortcutHint = getSectionShortcutHint(section)
             return h(
               "span",

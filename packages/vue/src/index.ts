@@ -5,6 +5,14 @@ export {
   createFabButtonConfig,
   getFabButtonConfig,
   getFabButtonCssMode,
-  resetFabButtonConfig
+  resetFabButtonConfig,
+  visibleWhen,
+  disabledWhen
 } from "@rezafab/fab-button-core"
-export type { FabButtonStyleConfig, FabButtonLibraryClassMap } from "@rezafab/fab-button-core"
+export type {
+  FabButtonStyleConfig,
+  FabButtonLibraryClassMap,
+  FabButtonSectionGuard,
+  FabButtonSectionActionMeta,
+  FabButtonSectionActionSource
+} from "@rezafab/fab-button-core"

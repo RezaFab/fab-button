@@ -6,15 +6,41 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 
 ## Why FabButton
 
-- Framework-agnostic core logic and types
-- React adapter for immediate use in React projects
-- Vue adapter for Vue 3 projects
-- Svelte adapter for Svelte projects
-- Web Component adapter (`<fab-button>`) for vanilla HTML, Vue, Svelte, Angular, or legacy apps
-- Easy customization via:
-  - CSS variables such as `--fab-button-bg`, `--fab-button-radius`, and `--fab-button-gap`
-  - Data attributes such as `data-variant`, `data-size`, `data-layout`, and `data-section`
-- Works with plain CSS, utility-first CSS classes, and existing design systems
+FabButton gives you one section-based API for grouped actions while keeping styling, keyboard behavior, and framework portability consistent.
+
+### Latest in v1.5.0
+
+- Built-in section confirmation flow (`confirm: true | { title, description }`)
+- Per-section async feedback states (`idle`, `loading`, `success`, `error`)
+- Promise-aware async handling with manual `asyncState` override support
+- `asyncFeedbackDuration` for per-section auto reset timing
+- Automatic shortcut hint UI from `shortcut` / `shortcutId`
+- Responsive overflow mode (`More` menu) for compact screens
+- Role/permission guard helpers (`visibleWhen`, `disabledWhen`)
+- Split-button preset (`actionPreset="split"`)
+- Action analytics hook (`onSectionAction`) with source metadata
+
+### Core Strengths
+
+- Section-based action composition in one component (`left`, `center`, `right`, or custom keys)
+- Keyboard accessibility (`tab`/`toolbar` navigation + built-in shortcut matching)
+- Styling flexibility via CSS variables, data attributes, and runtime CSS mode (`manual`/`library`)
+- Native theme support (`light`, `dark`, `system`)
+- Framework portability: React, Vue, Svelte, and Web Component adapters
+
+### Feature Support by Adapter
+
+| Feature | React | Vue | Svelte | Web Component |
+| --- | --- | --- | --- | --- |
+| Section confirmation modal (`confirm`) | Yes | Yes | Yes | Yes |
+| Per-section async state (manual) | Yes | Yes | Yes | Yes (`data-async-state`) |
+| Promise auto async handling | Yes | Yes | Yes | No |
+| Shortcut hint UI + shortcut metadata | Yes | Yes | Yes | Yes |
+| Responsive overflow mode (`More` menu) | Yes | Yes | Yes | No |
+| Role/permission guards (`visibleWhen` / `disabledWhen`) | Yes | Yes | Yes | No |
+| Split-button preset (`actionPreset="split"`) | Yes | Yes | Yes | No |
+| Action analytics hook (`onSectionAction`) | Yes | Yes | Yes | Yes (`section-action` event) |
+| CSS mode config (`manual`/`library`) + theme config | Yes | Yes | Yes | Yes |
 
 ## Packages
 
@@ -28,6 +54,8 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 - `@rezafab/docs`: Storybook documentation app
 
 ## Installation
+
+Install the adapter package that matches your app stack:
 
 ```bash
 pnpm add @rezafab/fab-button-react
@@ -43,6 +71,12 @@ pnpm add @rezafab/fab-button-vue
 
 ```bash
 pnpm add @rezafab/fab-button-svelte
+```
+
+Or install the umbrella package and use subpath imports (`@rezafab/fab-button/react`, `/vue`, `/svelte`, `/element`):
+
+```bash
+pnpm add @rezafab/fab-button
 ```
 
 ## CSS Mode (Manual vs Library)
@@ -456,19 +490,10 @@ export function TraditionalApprovalActions({ currentRole }: { currentRole: Role 
 ### With FabButton (single grouped control with role logic)
 
 ```tsx
-import { FabButton } from "@rezafab/fab-button-react"
+import { FabButton, disabledWhen, visibleWhen } from "@rezafab/fab-button-react"
 import { useState } from "react"
 
 type Role = "staff" | "supervisor" | "manager"
-
-type FabSection = {
-  key: string
-  content: string
-  disabled?: boolean
-  onClick?: () => void
-}
-
-const isSection = (value: FabSection | false): value is FabSection => Boolean(value)
 
 export function FabButtonApprovalActions({ currentRole }: { currentRole: Role }) {
   const [loading, setLoading] = useState(false)
@@ -492,25 +517,28 @@ export function FabButtonApprovalActions({ currentRole }: { currentRole: Role })
   }
 
   const sections = [
-    canSeeStaff && {
+    {
       key: "staff",
       content: "Staff Approve",
-      disabled: !canApproveStaff,
+      ...visibleWhen(canSeeStaff),
+      ...disabledWhen(!canApproveStaff),
       onClick: () => run(() => setStaffApproved(true))
     },
-    canSeeSupervisor && {
+    {
       key: "supervisor",
       content: "Supervisor Approve",
-      disabled: !canApproveSupervisor,
+      ...visibleWhen(canSeeSupervisor),
+      ...disabledWhen(!canApproveSupervisor),
       onClick: () => run(() => setSupervisorApproved(true))
     },
-    canSeeManager && {
+    {
       key: "manager",
       content: "Manager Approve",
-      disabled: !canApproveManager,
+      ...visibleWhen(canSeeManager),
+      ...disabledWhen(!canApproveManager),
       onClick: () => run(() => setManagerApproved(true))
     }
-  ].filter(isSection)
+  ]
 
   return <FabButton loading={loading} sections={sections} />
 }
@@ -636,6 +664,7 @@ If any section has `onClick`, `FabButton` uses a non-button group root and rende
 ## Built-in Section Confirmation
 
 Use `confirm` on a section to require user confirmation before `onClick` runs.
+Supported in React, Vue, Svelte, and Web Component adapters.
 
 - `confirm: true` uses the built-in FabButton confirm modal with default text.
 - `confirm: { title, description }` uses the same modal with custom message text.
@@ -677,14 +706,15 @@ For Web Component sections, use data attributes:
 
 Each section can expose async feedback state:
 
+- `idle`
 - `loading`
 - `success`
 - `error`
 
 Two usage modes:
 
-- Auto mode: return a `Promise` from section `onClick`, and FabButton will automatically show `loading` then `success`/`error`.
-- Manual mode: set `asyncState` directly (`"loading" | "success" | "error"`) from your own app state.
+- Auto mode (React/Vue/Svelte): return a `Promise` from section `onClick`, and FabButton will automatically show `loading` then `success`/`error`.
+- Manual mode (all adapters): set `asyncState` directly (`"idle" | "loading" | "success" | "error"`) from your own app state.
 
 ```tsx
 <FabButton
@@ -715,9 +745,11 @@ Two usage modes:
 Optional reset timing for auto mode:
 
 - `asyncFeedbackDuration` (milliseconds) on each section.
+- Default auto reset timing is `1600ms` when `asyncFeedbackDuration` is not set.
 
 Web Component manual state can use:
 
+- `data-async-state="idle"`
 - `data-async-state="loading"`
 - `data-async-state="success"`
 - `data-async-state="error"`
@@ -770,6 +802,7 @@ Web Component manual state can use:
 ## Responsive Overflow Mode (More Menu)
 
 Use overflow mode to keep the button compact on small screens.
+Supported in React, Vue, and Svelte adapters.
 
 ```tsx
 <FabButton
@@ -797,6 +830,41 @@ Props:
 - `overflowBreakpoint` default: `768`
 - `overflowVisibleCount` default: `2`
 - `overflowMenuLabel` default: `"More"`
+
+Web Component adapter does not provide a built-in overflow menu.
+
+## Split Button Preset (Primary + Dropdown)
+
+Use split preset when you want the first action to stay as the primary button and the remaining actions to move into a dropdown.
+Supported in React, Vue, and Svelte adapters.
+
+```tsx
+<FabButton
+  actionPreset="split"
+  splitButtonTriggerSide="right"
+  sections={[
+    { key: "save", content: "Save", onClick: () => {} },
+    { key: "publish", content: "Publish", onClick: () => {} },
+    { key: "archive", content: "Archive", onClick: () => {} }
+  ]}
+/>
+```
+
+Behavior:
+
+- First section is rendered as the primary action.
+- Remaining sections are rendered inside the split dropdown menu trigger (default: down symbol `\u25BE`).
+- The last action selected from dropdown becomes the next primary action.
+- `actionPreset="split"` has priority over responsive `overflowMode`.
+- For multiple split buttons (each with its own dropdown), compose multiple `FabButton` instances side-by-side.
+
+Props:
+
+- `actionPreset` default: `"default"` (`"split"` to enable split-button preset)
+- `splitButtonMenuLabel` default: `"\u25BE"`
+- `splitButtonTriggerSide` default: `"right"` (`"left"` or `"right"`)
+
+Web Component adapter does not provide a built-in split-button preset.
 
 ## Custom CSS Override
 
@@ -895,10 +963,8 @@ export function KeyboardShortcutActions() {
 
 Simple rule:
 
-- Use `shortcut` only when you want one direct number key.
-  Example: `shortcut: "1"` (matches key `1` / `Digit1`).
-- Use `shortcutId` when you want more than one mapping for the same section.
-  Example: `shortcutId: [16, 95]` to support `Digit2` and `Numpad2`.
+- Use `shortcut` for key-based tokens (for example: `"1"`, `"c"`, `"Digit1"`, `"code:Digit1"`, `"key:Enter"`).
+- Use `shortcutId` for keyboard-map ID based tokens (for example: `16` or `[16, 95]`).
 
 Reference:
 
@@ -906,6 +972,47 @@ Reference:
 - `shortcutId: 95` = `Numpad2`
 
 All shortcuts trigger the same section click path, so behavior stays consistent with mouse interaction.
+
+### Action Analytics Hook
+
+Use `onSectionAction` to track action source metadata:
+
+- `click`: pointer/touch interaction
+- `shortcut`: global shortcut trigger (`shortcut` / `shortcutId`)
+- `keyboard-nav`: keyboard activation from section focus (`Enter` / `Space`)
+
+```tsx
+import { FabButton } from "@rezafab/fab-button-react"
+
+<FabButton
+  keyboardNavigation="toolbar"
+  sections={[
+    { key: "copy", shortcut: "1", content: "Copy", onClick: () => {} },
+    { key: "share", shortcutId: 16, content: "Share", onClick: () => {} },
+    { key: "save", content: "Save", onClick: () => {} }
+  ]}
+  onSectionAction={(meta) => {
+    // meta: { key, index, source }
+    console.log(meta.key, meta.index, meta.source)
+  }}
+/>
+```
+
+For Web Component, listen to native `section-action` event:
+
+```html
+<fab-button id="analytics-button" keyboard-navigation="toolbar">
+  <button data-section="copy" data-shortcut="1">Copy</button>
+  <button data-section="share" data-shortcut-id="16">Share</button>
+</fab-button>
+<script>
+  const button = document.getElementById("analytics-button")
+  button?.addEventListener("section-action", (event) => {
+    // event.detail = { key, index, source }
+    console.log(event.detail)
+  })
+</script>
+```
 
 ### Automatic Shortcut Hint UI
 
@@ -925,11 +1032,12 @@ Result in default styled mode:
 - `Copy` shows badge `1`
 - `Share` shows badge `2 / Num2`
 
-For React/Vue/Svelte `unstyled` mode, the visual badge is skipped, but metadata still exists via:
+For React/Vue/Svelte `unstyled` mode, the visual badge is skipped. Metadata remains available via:
 
 - `data-shortcut`
 - `data-shortcut-id`
-- `data-shortcut-hint`
+
+`data-shortcut-hint` is emitted when shortcut hint rendering is enabled (default styled mode).
 
 ### Full Keyboard Shortcut ID Map
 
@@ -1028,7 +1136,4 @@ pnpm storybook
 ## Roadmap
 
 - Publish examples for non-bundler environments
-- Role/permission guard helpers (`visibleWhen`, `disabledWhen`)
-- Split-button preset (primary action + dropdown actions)
-- Action analytics hook (`onSectionAction`) with source metadata (`click`, `shortcut`, `keyboard-nav`)
 - Interactive playground + code generator for React, Vue, Svelte, and Element usage

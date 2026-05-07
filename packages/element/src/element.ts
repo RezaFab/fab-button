@@ -9,7 +9,7 @@ import {
   resolveSectionIndex,
   subscribeFabButtonConfig
 } from "@rezafab/fab-button-core"
-import type { FabButtonResolvedSectionConfirm } from "@rezafab/fab-button-core"
+import type { FabButtonResolvedSectionConfirm, FabButtonSectionActionSource } from "@rezafab/fab-button-core"
 
 type FabButtonElementAttributes =
   | "variant"
@@ -41,6 +41,7 @@ const OBSERVED_ATTRIBUTES: FabButtonElementAttributes[] = [
   "keyboard-orientation",
   "loop-navigation"
 ]
+const KEYBOARD_ACTIVATION_KEYS = new Set(["Enter", " ", "Spacebar"])
 
 export class FabButtonElement extends HTMLElement {
   private activeSectionIndex = -1
@@ -48,6 +49,10 @@ export class FabButtonElement extends HTMLElement {
   private unsubscribeConfig: (() => void) | undefined
   private pendingConfirmSection: HTMLElement | null = null
   private confirmBypassSection: HTMLElement | null = null
+  private pendingSectionActionSource:
+    | { section: HTMLElement; source: FabButtonSectionActionSource }
+    | null = null
+  private pendingConfirmSectionActionSource: FabButtonSectionActionSource | null = null
   private confirmDialogElement: HTMLElement | null = null
   private confirmDialogCleanup: (() => void) | null = null
 
@@ -64,10 +69,22 @@ export class FabButtonElement extends HTMLElement {
 
     const key = section.dataset.section
     if (!key) return
+    const indexValue = Number(section.dataset.sectionIndex)
+    const index = Number.isNaN(indexValue)
+      ? this.getSectionElements().findIndex((entry) => entry === section)
+      : indexValue
+    const source = this.consumeSectionActionSource(section, event)
 
     this.dispatchEvent(
       new CustomEvent("section-click", {
         detail: { key },
+        bubbles: true,
+        composed: true
+      })
+    )
+    this.dispatchEvent(
+      new CustomEvent("section-action", {
+        detail: { key, index, source },
         bubbles: true,
         composed: true
       })
@@ -96,22 +113,29 @@ export class FabButtonElement extends HTMLElement {
       }
     )
     if (!confirmPrompt) return
+    const confirmActionSource = this.consumeSectionActionSource(section, event)
 
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
     this.openConfirmDialog(section, confirmPrompt)
+    this.pendingConfirmSectionActionSource = confirmActionSource
   }
 
   private readonly onHostKeyDown = (event: KeyboardEvent) => {
     if (!this.isToolbarMode() || this.isDisabled()) return
 
-    const command = getNavigationCommand(event.key, this.getKeyboardOrientation())
-    if (!command) return
-
     const target = event.target as HTMLElement | null
     const section = target?.closest<HTMLElement>("[data-section][data-section-index]")
     if (!section || !this.contains(section)) return
+
+    if (KEYBOARD_ACTIVATION_KEYS.has(event.key)) {
+      this.setPendingSectionActionSource(section, "keyboard-nav")
+      return
+    }
+
+    const command = getNavigationCommand(event.key, this.getKeyboardOrientation())
+    if (!command) return
 
     const enabledIndices = this.getEnabledSectionIndices()
     if (!enabledIndices.length) return
@@ -173,6 +197,7 @@ export class FabButtonElement extends HTMLElement {
       this.activeSectionIndex = shortcutSectionIndex
       this.syncRovingTabIndex()
     }
+    this.setPendingSectionActionSource(shortcutSection, "shortcut")
     shortcutSection.focus()
     shortcutSection.click()
   }
@@ -310,15 +335,18 @@ export class FabButtonElement extends HTMLElement {
     }
     this.confirmDialogElement = null
     this.pendingConfirmSection = null
+    this.pendingConfirmSectionActionSource = null
   }
 
   private proceedConfirmedSectionAction() {
     const targetSection = this.pendingConfirmSection
+    const sectionActionSource = this.pendingConfirmSectionActionSource ?? "click"
     this.closeConfirmDialog()
     if (!targetSection) return
     if (targetSection.hasAttribute("disabled") || targetSection.getAttribute("aria-disabled") === "true") return
 
     this.confirmBypassSection = targetSection
+    this.setPendingSectionActionSource(targetSection, sectionActionSource)
     targetSection.focus()
     targetSection.click()
   }
@@ -395,6 +423,23 @@ export class FabButtonElement extends HTMLElement {
     }
     document.body.appendChild(backdrop)
     this.confirmDialogElement = backdrop
+  }
+
+  private setPendingSectionActionSource(section: HTMLElement, source: FabButtonSectionActionSource) {
+    this.pendingSectionActionSource = { section, source }
+  }
+
+  private consumeSectionActionSource(
+    section: HTMLElement,
+    event: Event
+  ): FabButtonSectionActionSource {
+    if (this.pendingSectionActionSource?.section === section) {
+      const source = this.pendingSectionActionSource.source
+      this.pendingSectionActionSource = null
+      return source
+    }
+    if (event instanceof MouseEvent && event.detail === 0) return "keyboard-nav"
+    return "click"
   }
 
   private getEnabledSectionIndices() {

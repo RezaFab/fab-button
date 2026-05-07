@@ -1,8 +1,10 @@
 import type {
+  FabButtonActionPreset,
   FabButtonKeyboardNavigation,
   FabButtonKeyboardOrientation,
   FabButtonLayout,
   FabButtonOverflowMode,
+  FabButtonSectionActionMeta,
   FabButtonSectionBase,
   FabButtonShape,
   FabButtonSize,
@@ -39,8 +41,12 @@ export interface FabButtonProps {
   keyboardOrientation?: FabButtonKeyboardOrientation
   loopNavigation?: boolean
   overflowMode?: FabButtonOverflowMode
+  actionPreset?: FabButtonActionPreset
+  splitButtonMenuLabel?: string
+  splitButtonTriggerSide?: "left" | "right"
   overflowBreakpoint?: number
   overflowVisibleCount?: number
   overflowMenuLabel?: string
+  onSectionAction?: (meta: FabButtonSectionActionMeta) => void
   onClick?: (event: MouseEvent) => void
 }
