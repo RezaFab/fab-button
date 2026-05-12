@@ -8,7 +8,7 @@ FabButton is a section-based button builder for modern and legacy frontends. It 
 
 FabButton gives you one section-based API for grouped actions while keeping styling, keyboard behavior, and framework portability consistent.
 
-### Latest in v1.5.2
+### Latest in v1.5.3
 
 - Built-in section confirmation flow (`confirm: true | { title, description }`)
 - Per-section async feedback states (`idle`, `loading`, `success`, `error`)

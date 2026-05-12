@@ -27,4 +27,5 @@ git commit -m "chore: version packages"
 pnpm run release:publish
 ```
 
+`release:publish` publishes workspace packages first, then publishes the workspace root package.
 Avoid using `changeset publish` directly in this repo, because it runs `npm publish` and may publish `workspace:*` dependencies without conversion.

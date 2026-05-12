@@ -1,0 +1,32 @@
+{
+	"publishedPackages": [
+		{
+			"name": "@rezafab/fab-button-core",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-theme-tokens",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-styles",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-element",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-react",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-svelte",
+			"version": "0.1.0"
+		},
+		{
+			"name": "@rezafab/fab-button-vue",
+			"version": "0.1.0"
+		}
+	]
+}

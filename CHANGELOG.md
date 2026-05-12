@@ -2,6 +2,10 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.5.3] - 2026-05-12
+
+- fix(release): publish workspace packages first, then publish root package (`@rezafab/fab-button`) with pnpm to avoid leaking `workspace:*` in npm metadata.
+
 ## [1.5.2] - 2026-05-12
 
 - fix(release): republish with pnpm workspace flow so workspace dependencies are converted for external installs.
