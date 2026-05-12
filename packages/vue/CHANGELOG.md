@@ -1,0 +1,25 @@
+# @rezafab/fab-button-vue
+
+## 1.0.0
+
+### Major Changes
+
+- docs: add per-package README guidance recommending @rezafab/fab-button and explaining why packages are split in the monorepo
+
+### Patch Changes
+
+- Updated dependencies
+  - @rezafab/fab-button-styles@1.0.0
+  - @rezafab/fab-button-core@1.0.0
+
+## 0.2.0
+
+### Minor Changes
+
+- docs: add per-package README guidance recommending @rezafab/fab-button and explaining why packages are split in the monorepo
+
+### Patch Changes
+
+- Updated dependencies
+  - @rezafab/fab-button-core@0.2.0
+  - @rezafab/fab-button-styles@0.2.0

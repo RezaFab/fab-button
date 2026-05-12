@@ -1,13 +1,19 @@
 {
   "name": "@rezafab/fab-button-theme-tokens",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Theme tokens for FabButton.",
   "type": "module",
   "main": "./index.js",
   "module": "./index.js",
   "types": "./index.d.ts",
-  "files": ["index.js", "index.d.ts", "tokens.css"],
-  "sideEffects": ["tokens.css"],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "tokens.css"
+  ],
+  "sideEffects": [
+    "tokens.css"
+  ],
   "scripts": {
     "build": "echo \"theme-tokens package: no build step\"",
     "test": "vitest run --passWithNoTests"

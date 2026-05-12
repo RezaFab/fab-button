@@ -1,14 +1,18 @@
 {
   "name": "@rezafab/fab-button-svelte",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Svelte adapter for FabButton.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "svelte": "./dist/index.js",
-  "files": ["dist"],
-  "sideEffects": ["*.css"],
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "build": "vite build",
     "test": "vitest run --passWithNoTests"
