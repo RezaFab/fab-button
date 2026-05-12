@@ -2,6 +2,10 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.5.2] - 2026-05-12
+
+- fix(release): republish with pnpm workspace flow so workspace dependencies are converted for external installs.
+
 ## [1.5.1] - 2026-05-12
 
 - fix(release): publish with pnpm workspace flow.
