@@ -15,3 +15,16 @@ pnpm install
 pnpm build
 pnpm storybook
 ```
+
+## Release Flow (pnpm Workspace)
+
+Use this flow for publishing:
+
+```bash
+pnpm run release
+git add -A
+git commit -m "chore: version packages"
+pnpm run release:publish
+```
+
+Avoid using `changeset publish` directly in this repo, because it runs `npm publish` and may publish `workspace:*` dependencies without conversion.

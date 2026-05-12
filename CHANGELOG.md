@@ -2,6 +2,10 @@
 
 All notable changes to `@rezafab/fab-button` are documented in this file.
 
+## [1.5.1] - 2026-05-12
+
+- fix(release): publish with pnpm workspace flow.
+
 ## [1.5.0] - 2026-05-07
 
 - Added role/permission section guard helpers: `visibleWhen(...)` and `disabledWhen(...)`.

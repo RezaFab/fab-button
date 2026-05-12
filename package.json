@@ -1,6 +1,6 @@
 {
   "name": "@rezafab/fab-button",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": false,
   "description": "Styled by default. Flexible by design.",
   "keywords": [
@@ -98,7 +98,9 @@
     "version:major-button": "npm version major",
     "version:merge": "npm version minor",
     "version:fix": "npm version patch",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && pnpm run release:version",
+    "release:version": "changeset version && pnpm install",
+    "release:publish": "pnpm -r publish --access public"
   },
   "dependencies": {
     "@rezafab/fab-button-theme-tokens": "workspace:*"
